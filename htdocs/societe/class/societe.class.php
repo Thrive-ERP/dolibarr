@@ -3120,6 +3120,7 @@ class Societe extends CommonObject
 		$sql = "SELECT rowid, email, statut as status, phone_mobile, lastname, poste, firstname";
 		$sql .= " FROM ".MAIN_DB_PREFIX."socpeople";
 		$sql .= " WHERE fk_soc = ".((int) $this->id);
+		$sql .= " AND entity IN (".getEntity($this->element).")";
 		$sql .= " ORDER BY lastname, firstname";
 
 		$resql = $this->db->query($sql);
@@ -4719,11 +4720,12 @@ class Societe extends CommonObject
 	{
 		// phpcs:enable
 		global $langs;
-
-		$lib = $langs->trans("ProspectLevel".$fk_prospectlevel);
-		// If lib not found in language file, we get label from cache/database
-		if ($lib == "ProspectLevel".$fk_prospectlevel) {
-			$lib = $langs->getLabelFromKey($this->db, $fk_prospectlevel, 'c_prospectlevel', 'code', 'label');
+		if ($fk_prospectlevel != '') {
+			$lib = $langs->trans("ProspectLevel".$fk_prospectlevel);
+			// If lib not found in language file, we get label from cache/database
+			if ($lib == "ProspectLevel".$fk_prospectlevel) {
+				$lib = $langs->getLabelFromKey($this->db, $fk_prospectlevel, 'c_prospectlevel', 'code', 'label');
+			}
 		}
 		return $lib;
 	}
