@@ -186,6 +186,7 @@ if (empty($reshook)) {
 	}
 
 	if ($action == 'save_price') {
+		$ref_fourn_price_id = GETPOSTINT('ref_fourn_price_id');
 		$id_fourn = GETPOST("id_fourn");
 		if (empty($id_fourn)) {
 			$id_fourn = GETPOST("search_id_fourn");
@@ -270,7 +271,7 @@ if (empty($reshook)) {
 		if (!$error) {
 			$db->begin();
 
-			if (!$error) {
+			if (empty($ref_fourn_price_id)) {
 				$ret = $object->add_fournisseur($user, $id_fourn, $ref_fourn_old, $quantity); // This insert record with no value for price. Values are update later with update_buyprice
 				if ($ret == -3) {
 					$error++;
@@ -291,8 +292,8 @@ if (empty($reshook)) {
 			if (!$error) {
 				$supplier = new Fournisseur($db);
 				$result = $supplier->fetch($id_fourn);
-				if (GETPOSTISSET('ref_fourn_price_id')) {
-					$object->fetch_product_fournisseur_price(GETPOST('ref_fourn_price_id', 'int'));
+				if ($ref_fourn_price_id > 0) {
+					$object->fetch_product_fournisseur_price($ref_fourn_price_id);
 				}
 				$extralabels = $extrafields->fetch_name_optionals_label("product_fournisseur_price");
 				$extrafield_values = $extrafields->getOptionalsFromPost("product_fournisseur_price");
@@ -391,7 +392,7 @@ if ($id > 0 || $ref) {
 
 			print dol_get_fiche_head($head, 'suppliers', $titre, -1, $picto);
 
-			$linkback = '<a href="'.DOL_URL_ROOT.'/product/list.php?restore_lastsearch_values=1">'.$langs->trans("BackToList").'</a>';
+			$linkback = '<a href="'.DOL_URL_ROOT.'/product/list.php?restore_lastsearch_values=1&type='.$object->type.'">'.$langs->trans("BackToList").'</a>';
 			$object->next_prev_filter = "fk_product_type = ".((int) $object->type);
 
 			$shownav = 1;
@@ -505,10 +506,10 @@ if ($id > 0 || $ref) {
 				} else {
 					$events = array();
 					$events[] = array('method' => 'getVatRates', 'url' => dol_buildpath('/core/ajax/vatrates.php', 1), 'htmlname' => 'tva_tx', 'params' => array());
-					$filter = '(fournisseur:=:1)';
+					$filter = '(fournisseur:=:1) AND (status:=:1)';
 					print img_picto('', 'company', 'class="pictofixedwidth"').$form->select_company(GETPOST("id_fourn", 'alpha'), 'id_fourn', $filter, 'SelectThirdParty', 0, 0, $events);
 
-					$parameters = array('filtre'=>"fournisseur=1", 'html_name'=>'id_fourn', 'selected'=>GETPOST("id_fourn"), 'showempty'=>1, 'prod_id'=>$object->id);
+					$parameters = array('filter'=>$filter, 'html_name'=>'id_fourn', 'selected'=>GETPOST("id_fourn"), 'showempty'=>1, 'prod_id'=>$object->id);
 					$reshook = $hookmanager->executeHooks('formCreateThirdpartyOptions', $parameters, $object, $action);
 					if (empty($reshook)) {
 						if (empty($form->result)) {

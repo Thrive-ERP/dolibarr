@@ -376,6 +376,12 @@ class User extends CommonObject
 	 */
 	public $egroupware_id;
 
+	/**
+	 * @var array		Entity in table llx_user_group
+	 * @deprecated		Seems not used.
+	 */
+	public $usergroup_entity;
+
 	public $fields = array(
 		'rowid'=>array('type'=>'integer', 'label'=>'TechnicalID', 'enabled'=>1, 'visible'=>-2, 'notnull'=>1, 'index'=>1, 'position'=>1, 'comment'=>'Id'),
 		'lastname'=>array('type'=>'varchar(50)', 'label'=>'LastName', 'enabled'=>1, 'visible'=>1, 'notnull'=>1, 'showoncombobox'=>1, 'index'=>1, 'position'=>20, 'searchall'=>1),
@@ -3759,7 +3765,7 @@ class User extends CommonObject
 		}
 
 		dol_syslog(get_class($this)."::get_full_tree dol_sort_array", LOG_DEBUG);
-		$this->users = dol_sort_array($this->users, 'fullname', 'asc', true, false);
+		$this->users = dol_sort_array($this->users, 'fullname', 'asc', true, false, 1);
 
 		//var_dump($this->users);
 
@@ -4052,7 +4058,7 @@ class User extends CommonObject
 			foreach ($filter as $key => $value) {
 				if ($key == 't.rowid') {
 					$sqlwhere[] = $key." = ".((int) $value);
-				} elseif (isset($this->fields[$key]['type']) && in_array($this->fields[$key]['type'], array('date', 'datetime', 'timestamp'))) {
+				} elseif (array_key_exists($key, $this->fields) && isset($this->fields[$key]['type']) && in_array($this->fields[$key]['type'], array('date', 'datetime', 'timestamp'))) {
 					$sqlwhere[] = $key." = '".$this->db->idate($value)."'";
 				} elseif ($key == 'customsql') {
 					$sqlwhere[] = $value;

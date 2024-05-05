@@ -550,7 +550,7 @@ if (empty($reshook)) {
 						$error++;
 						if ($db->errno() == 'DB_ERROR_RECORD_ALREADY_EXISTS') {
 							$langs->load("errors");
-							setEventMessages($langs->trans("ErrorLoginAlreadyExists", $object->login), null, 'errors');
+							setEventMessages($langs->trans("ErrorUpdateCanceledDueToDuplicatedUniqueValue", $object->login), null, 'errors');
 						} else {
 							setEventMessages($object->error, $object->errors, 'errors');
 							$action = 'edit';
@@ -2554,7 +2554,7 @@ if ($action == 'create' || $action == 'adduserldap') {
 				print '<tr><td class="tdoverflow">'.$form->editfieldkey('State', 'state_id', '', $object, 0).'</td><td>';
 				if ($caneditfield) {
 					print img_picto('', 'state', 'class="pictofixedwidth"');
-					print $formcompany->select_state($object->state_id, $object->country_code, 'state_id');
+					print $formcompany->select_state_ajax('country_id', $object->state_id, $object->country_id, 'state_id');
 				} else {
 					print $object->state;
 				}

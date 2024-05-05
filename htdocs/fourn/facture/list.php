@@ -650,17 +650,17 @@ if (!empty($searchCategoryProductList)) {
 	$listofcategoryid = '';
 	foreach ($searchCategoryProductList as $searchCategoryProduct) {
 		if (intval($searchCategoryProduct) == -2) {
-			$searchCategoryProductSqlList[] = "NOT EXISTS (SELECT ck.fk_product FROM ".MAIN_DB_PREFIX."categorie_product as ck, ".MAIN_DB_PREFIX."facture_fourn_det as fd WHERE fd.fk_facture_fourn = f.rowid AND p.rowid = ck.fk_product)";
+			$searchCategoryProductSqlList[] = "NOT EXISTS (SELECT ck.fk_product FROM ".MAIN_DB_PREFIX."categorie_product as ck, ".MAIN_DB_PREFIX."facture_fourn_det as fd WHERE fd.fk_facture_fourn = f.rowid AND fd.fk_product = ck.fk_product)";
 		} elseif (intval($searchCategoryProduct) > 0) {
 			if ($searchCategoryProductOperator == 0) {
-				$searchCategoryProductSqlList[] = " EXISTS (SELECT ck.fk_product FROM ".MAIN_DB_PREFIX."categorie_product as ck, ".MAIN_DB_PREFIX."facture_fourn_det as fd WHERE fd.fk_facture_fourn = f.rowid AND p.rowid = ck.fk_product AND ck.fk_categorie = ".((int) $searchCategoryProduct).")";
+				$searchCategoryProductSqlList[] = " EXISTS (SELECT ck.fk_product FROM ".MAIN_DB_PREFIX."categorie_product as ck, ".MAIN_DB_PREFIX."facture_fourn_det as fd WHERE fd.fk_facture_fourn = f.rowid AND fd.fk_product = ck.fk_product AND ck.fk_categorie = ".((int) $searchCategoryProduct).")";
 			} else {
 				$listofcategoryid .= ($listofcategoryid ? ', ' : '') .((int) $searchCategoryProduct);
 			}
 		}
 	}
 	if ($listofcategoryid) {
-		$searchCategoryProductSqlList[] = " EXISTS (SELECT ck.fk_product FROM ".MAIN_DB_PREFIX."categorie_product as ck, ".MAIN_DB_PREFIX."facture_fourn_det as fd WHERE fd.fk_facture_fourn = f.rowid AND p.rowid = ck.fk_product AND ck.fk_categorie IN (".$db->sanitize($listofcategoryid)."))";
+		$searchCategoryProductSqlList[] = " EXISTS (SELECT ck.fk_product FROM ".MAIN_DB_PREFIX."categorie_product as ck, ".MAIN_DB_PREFIX."facture_fourn_det as fd WHERE fd.fk_facture_fourn = f.rowid AND fd.fk_product = ck.fk_product AND ck.fk_categorie IN (".$db->sanitize($listofcategoryid)."))";
 	}
 	if ($searchCategoryProductOperator == 1) {
 		if (!empty($searchCategoryProductSqlList)) {
@@ -1273,7 +1273,7 @@ if (!empty($arrayfields['f.tms']['checked'])) {
 }
 // Status
 if (!empty($arrayfields['f.fk_statut']['checked'])) {
-	print '<td class="liste_titre right parentonrightofpage">';
+	print '<td class="liste_titre center parentonrightofpage">';
 	$liststatus = array('0'=>$langs->trans("Draft"), '1'=>$langs->trans("Unpaid"), '2'=>$langs->trans("Paid"));
 	print $form->selectarray('search_status', $liststatus, $search_status, 1, 0, 0, '', 0, 0, 0, '', 'center search_status width100 onrightofpage', 1);
 	print '</td>';
@@ -1477,6 +1477,8 @@ $totalarray['val']['f.total_vat']=0;
 $totalarray['val']['f.total_localtax1']=0;
 $totalarray['val']['f.total_localtax1']=0;
 $totalarray['val']['f.total_ttc']=0;
+$totalarray['val']['totalam']=0;
+$totalarray['val']['rtp']=0;
 $imaxinloop = ($limit ? min($num, $limit) : $num);
 while ($i < $imaxinloop) {
 	$obj = $db->fetch_object($resql);
@@ -1492,6 +1494,7 @@ while ($i < $imaxinloop) {
 	$userstatic->firstname = $obj->firstname;
 	$userstatic->email = $obj->user_email;
 	$userstatic->statut = $obj->user_statut;
+	$userstatic->status = $obj->user_statut;
 	$userstatic->entity = $obj->entity;
 	$userstatic->photo = $obj->photo;
 	$userstatic->office_phone = $obj->office_phone;
@@ -1883,6 +1886,9 @@ while ($i < $imaxinloop) {
 			if (!$i) {
 				$totalarray['nbfield']++;
 				$totalarray['pos'][$totalarray['nbfield']] = 'totalam';
+			}
+			if (empty($totalarray['val']['totalam'])) {
+				$totalarray['val']['totalam'] = 0;		// avoid PHP Warning:  Undefined array key "totalam" on line 1891
 			}
 			$totalarray['val']['totalam'] += $totalpay;
 		}

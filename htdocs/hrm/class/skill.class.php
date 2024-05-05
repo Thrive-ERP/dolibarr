@@ -408,7 +408,7 @@ class Skill extends CommonObject
 		$this->lines = array();
 		require_once __DIR__ . '/skilldet.class.php';
 		$skilldet = new Skilldet($this->db);
-		$this->lines = $skilldet->fetchAll('ASC', '', '', '', array('fk_skill' => $this->id), '');
+		$this->lines = $skilldet->fetchAll('ASC', '', 0, 0, array('fk_skill' => $this->id));
 
 		if (is_array($this->lines)) {
 			return (count($this->lines) > 0) ? $this->lines : array();
@@ -434,8 +434,6 @@ class Skill extends CommonObject
 	 */
 	public function fetchAll($sortorder = '', $sortfield = '', $limit = 0, $offset = 0, array $filter = array(), $filtermode = 'AND')
 	{
-		global $conf;
-
 		dol_syslog(__METHOD__, LOG_DEBUG);
 
 		$records = array();
@@ -454,7 +452,7 @@ class Skill extends CommonObject
 			foreach ($filter as $key => $value) {
 				if ($key == 't.rowid') {
 					$sqlwhere[] = $key.'='.$value;
-				} elseif (in_array($this->fields[$key]['type'], array('date', 'datetime', 'timestamp'))) {
+				} elseif (array_key_exists($key, $this->fields) && in_array($this->fields[$key]['type'], array('date', 'datetime', 'timestamp'))) {
 					$sqlwhere[] = $key.' = \''.$this->db->idate($value).'\'';
 				} elseif ($key == 'customsql') {
 					$sqlwhere[] = $value;

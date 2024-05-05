@@ -36,6 +36,7 @@
 require '../main.inc.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/company.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/client.class.php';
 require_once DOL_DOCUMENT_ROOT.'/contact/class/contact.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formcompany.class.php';
@@ -219,7 +220,7 @@ if (empty($reshook)) {
 	if ($action == 'setassujtva' && $user->hasRight('societe', 'creer')) {
 		$object->fetch($id);
 		$object->tva_assuj = GETPOST('assujtva_value');
-		$result = $object->update($object->id);
+		$result = $object->update($object->id, $user);
 		if ($result < 0) {
 			setEventMessages($object->error, $object->errors, 'errors');
 		}

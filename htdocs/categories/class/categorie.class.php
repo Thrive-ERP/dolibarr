@@ -11,7 +11,7 @@
  * Copyright (C) 2015       Raphaël Doursenaud      <rdoursenaud@gpcsolutions.fr>
  * Copyright (C) 2016       Charlie Benke           <charlie@patas-monkey.com>
  * Copyright (C) 2018-2023  Frédéric France         <frederic.france@netlogic.fr>
- * Copyright (C) 2023		Benjamin Falière		<benjamin.faliere@altairis.fr>
+ * Copyright (C) 2023-2024	Benjamin Falière		<benjamin.faliere@altairis.fr>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -416,12 +416,13 @@ class Categorie extends CommonObject
 	 *  Add category into database
 	 *
 	 *  @param	User	$user		Object user
+	 *  @param	int		$notrigger	1=Does not execute triggers, 0= execute triggers
 	 *  @return	int 				-1 : SQL error
 	 *          					-2 : new ID unknown
 	 *          					-3 : Invalid category
 	 * 								-4 : category already exists
 	 */
-	public function create($user)
+	public function create($user, $notrigger = 0)
 	{
 		global $conf, $langs, $hookmanager;
 		$langs->load('categories');
@@ -505,7 +506,7 @@ class Categorie extends CommonObject
 					}
 				}
 
-				if (!$error) {
+				if (!$error && !$notrigger) {
 					// Call trigger
 					$result = $this->call_trigger('CATEGORY_CREATE', $user);
 					if ($result < 0) {
@@ -536,11 +537,12 @@ class Categorie extends CommonObject
 	 * 	Update category
 	 *
 	 *	@param	User	$user		Object user
+	 *  @param	int		$notrigger	1=Does not execute triggers, 0= execute triggers
 	 * 	@return	int		 			1 : OK
 	 *          					-1 : SQL error
 	 *          					-2 : invalid category
 	 */
-	public function update(User $user)
+	public function update(User $user, $notrigger = 0)
 	{
 		global $langs;
 
@@ -586,7 +588,7 @@ class Categorie extends CommonObject
 				}
 			}
 
-			if (!$error) {
+			if (!$error && !$notrigger) {
 				// Call trigger
 				$result = $this->call_trigger('CATEGORY_MODIFY', $user);
 				if ($result < 0) {
@@ -1157,6 +1159,7 @@ class Categorie extends CommonObject
 		}
 
 		$this->cats = array();
+		$nbcateg = 0;
 
 		// Init this->motherof that is array(id_son=>id_parent, ...)
 		$this->load_motherof();
@@ -1178,6 +1181,8 @@ class Categorie extends CommonObject
 		$resql = $this->db->query($sql);
 		if ($resql) {
 			$i = 0;
+			$nbcateg = $this->db->num_rows($resql);
+
 			while ($obj = $this->db->fetch_object($resql)) {
 				$this->cats[$obj->rowid]['rowid'] = $obj->rowid;
 				$this->cats[$obj->rowid]['id'] = $obj->rowid;
@@ -1199,7 +1204,7 @@ class Categorie extends CommonObject
 		dol_syslog(get_class($this)."::get_full_arbo call to buildPathFromId", LOG_DEBUG);
 		foreach ($this->cats as $key => $val) {
 			//print 'key='.$key.'<br>'."\n";
-			$this->buildPathFromId($key, 0); // Process a branch from the root category key (this category has no parent)
+			$this->buildPathFromId($key, $nbcateg); // Process a branch from the root category key (this category has no parent)
 		}
 
 		// Include or exclude leaf including $markafterid from tree
@@ -1913,10 +1918,11 @@ class Categorie extends CommonObject
 	 *	Update ou cree les traductions des infos produits
 	 *
 	 *	@param	User	$user		Object user
+	 *  @param	int		$notrigger	1=Does not execute triggers, 0= execute triggers
 	 *
 	 *	@return		int		Return integer <0 if KO, >0 if OK
 	 */
-	public function setMultiLangs($user)
+	public function setMultiLangs(User $user, $notrigger = 0)
 	{
 		global $langs;
 
@@ -1971,10 +1977,12 @@ class Categorie extends CommonObject
 		}
 
 		// Call trigger
-		$result = $this->call_trigger('CATEGORY_SET_MULTILANGS', $user);
-		if ($result < 0) {
-			$this->error = $this->db->lasterror();
-			return -1;
+		if (!$notrigger) {
+			$result = $this->call_trigger('CATEGORY_SET_MULTILANGS', $user);
+			if ($result < 0) {
+				$this->error = $this->db->lasterror();
+				return -1;
+			}
 		}
 		// End call triggers
 
