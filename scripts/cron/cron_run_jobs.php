@@ -59,6 +59,13 @@ if (substr($sapi_type, 0, 3) == 'cgi') {
 	exit(-1);
 }
 
+//Begin Customisation: Add code to manage details in config file dynamically
+if (isset($argv[1])) {
+        $argv1 = explode(".", $argv[1]);
+        $_SESSION['instance'] = $argv1[0];
+}
+//End Customisation
+
 require_once $path."../../htdocs/master.inc.php";
 require_once DOL_DOCUMENT_ROOT."/cron/class/cronjob.class.php";
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
