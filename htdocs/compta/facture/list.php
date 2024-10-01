@@ -1,24 +1,26 @@
 <?php
-/* Copyright (C) 2002-2006	Rodolphe Quiedeville		<rodolphe@quiedeville.org>
- * Copyright (C) 2004		Eric Seigne					<eric.seigne@ryxeo.com>
- * Copyright (C) 2004-2016	Laurent Destailleur			<eldy@users.sourceforge.net>
- * Copyright (C) 2005		Marc Barilley / Ocebo		<marc@ocebo.com>
- * Copyright (C) 2005-2015	Regis Houssin				<regis.houssin@inodbox.com>
- * Copyright (C) 2006		Andre Cianfarani			<acianfa@free.fr>
- * Copyright (C) 2010-2020	Juanjo Menent				<jmenent@2byte.es>
- * Copyright (C) 2012		Christophe Battarel			<christophe.battarel@altairis.fr>
- * Copyright (C) 2013		Florian Henry				<florian.henry@open-concept.pro>
- * Copyright (C) 2013		Cédric Salvador				<csalvador@gpcsolutions.fr>
- * Copyright (C) 2015		Jean-François Ferry			<jfefe@aternatik.fr>
- * Copyright (C) 2015-2022	Ferran Marcet				<fmarcet@2byte.es>
- * Copyright (C) 2017		Josep Lluís Amador			<joseplluis@lliuretic.cat>
- * Copyright (C) 2018		Charlene Benke				<charlie@patas-monkey.com>
- * Copyright (C) 2019-2024	Alexandre Spangaro			<alexandre@inovea-conseil.com>
+/* Copyright (C) 2002-2006	Rodolphe Quiedeville	<rodolphe@quiedeville.org>
+ * Copyright (C) 2004		Eric Seigne				<eric.seigne@ryxeo.com>
+ * Copyright (C) 2004-2016	Laurent Destailleur		<eldy@users.sourceforge.net>
+ * Copyright (C) 2005		Marc Barilley / Ocebo	<marc@ocebo.com>
+ * Copyright (C) 2005-2015	Regis Houssin			<regis.houssin@inodbox.com>
+ * Copyright (C) 2006		Andre Cianfarani		<acianfa@free.fr>
+ * Copyright (C) 2010-2020	Juanjo Menent			<jmenent@2byte.es>
+ * Copyright (C) 2012		Christophe Battarel		<christophe.battarel@altairis.fr>
+ * Copyright (C) 2013		Florian Henry			<florian.henry@open-concept.pro>
+ * Copyright (C) 2013		Cédric Salvador			<csalvador@gpcsolutions.fr>
+ * Copyright (C) 2015		Jean-François Ferry		<jfefe@aternatik.fr>
+ * Copyright (C) 2015-2022	Ferran Marcet			<fmarcet@2byte.es>
+ * Copyright (C) 2017		Josep Lluís Amador		<joseplluis@lliuretic.cat>
+ * Copyright (C) 2018		Charlene Benke			<charlie@patas-monkey.com>
+ * Copyright (C) 2019-2024	Alexandre Spangaro		<alexandre@inovea-conseil.com>
+ * Copyright (C) 2021-2024	Anthony Berton			<anthony.berton@bb2a.fr>
  * Copyright (C) 2023		Nick Fragoulis
- * Copyright (C) 2023		Joachim Kueter				<git-jk@bloxera.com>
- * Copyright (C) 2024		MDW							<mdeweerd@users.noreply.github.com>
- * Copyright (C) 2024		Frédéric France				<frederic.france@free.fr>
- * Copyright (C) 2021-2024 	Anthony Berton				<anthony.berton@bb2a.fr>
+ * Copyright (C) 2023		Joachim Kueter			<git-jk@bloxera.com>
+ * Copyright (C) 2024		MDW						<mdeweerd@users.noreply.github.com>
+ * Copyright (C) 2024		Frédéric France			<frederic.france@free.fr>
+ * Copyright (C) 2024		Solution Libre SAS		<contact@solution-libre.fr>
+ * Copyright (C) 2024		William Mead			<william.mead@manchenumerique.fr>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -395,11 +397,10 @@ if (GETPOST('button_removefilter_x', 'alpha') || GETPOST('button_removefilter', 
 	$search_datelimit_start = '';
 	$search_datelimit_end = '';
 	$search_fac_rec_source_title = '';
+	$search_option = '';
+	$search_categ_cus = 0;
 	$toselect = array();
 	$search_array_options = array();
-	$search_categ_cus = 0;
-	$search_option = '';
-	$socid = 0;
 }
 
 if (empty($reshook)) {
@@ -564,8 +565,9 @@ if ($action == 'makepayment_confirm' && $user->hasRight('facture', 'paiement')) 
 					$error++;
 					setEventMessages($objecttmp->ref.' '.$langs->trans("RequestAlreadyDone"), $objecttmp->errors, 'warnings');
 				} elseif (!empty($objecttmp->mode_reglement_code) && $objecttmp->mode_reglement_code != 'PRE') {
+					$langs->load("errors");
 					$error++;
-					setEventMessages($objecttmp->ref.' '.$langs->trans("BadPaymentMethod"), $objecttmp->errors, 'errors');
+					setEventMessages($objecttmp->ref.' '.$langs->trans("ErrorThisPaymentModeIsNotDirectDebit"), $objecttmp->errors, 'errors');
 				} else {
 					$listofbills[] = $objecttmp; // $listofbills will only contains invoices with good payment method and no request already done
 				}

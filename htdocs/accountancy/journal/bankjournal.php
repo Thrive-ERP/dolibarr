@@ -238,7 +238,7 @@ if ($result) {
 	$account_pay_subscription = getDolGlobalString('ADHERENT_SUBSCRIPTION_ACCOUNTINGACCOUNT', 'NotDefined'); // NotDefined is a reserved word
 	$account_transfer = getDolGlobalString('ACCOUNTING_ACCOUNT_TRANSFER_CASH', 'NotDefined'); // NotDefined is a reserved word
 
-	// Loop on each line into llx_bank table. For each line, we should get:
+	// Loop on each line into the llx_bank table. For each line, we should get:
 	// one line tabpay = line into bank
 	// one line for bank record = tabbq
 	// one line for thirdparty record = tabtp
@@ -355,9 +355,12 @@ if ($result) {
 					break;
 				}
 			}
+
 			// Now loop on each link of record in bank (code similar to bankentries_list.php)
 			foreach ($links as $key => $val) {
 				if ($links[$key]['type'] == 'user' && !$is_sc && !$is_salary && !$is_expensereport) {
+					// We must avoid as much as possible this "continue". If we want to jump to next loop, it means we don't want to process
+					// the case the link is user (often because managed by hard coded code into another link), and we must avoid this.
 					continue;
 				}
 				if (in_array($links[$key]['type'], array('sc', 'payment_sc', 'payment', 'payment_supplier', 'payment_vat', 'payment_expensereport', 'banktransfert', 'payment_donation', 'member', 'payment_loan', 'payment_salary', 'payment_various'))) {
@@ -605,25 +608,6 @@ if ($result) {
 			$tabtp[$obj->rowid]['NotDefined'] = $tabbq[$obj->rowid][$compta_bank];
 		}
 
-		// Check account number is ok
-		/*if ($action == 'writebookkeeping')		// Make test now in such a case
-		{
-			reset($tabbq[$obj->rowid]);
-			$first_key_tabbq = key($tabbq[$obj->rowid]);
-			if (empty($first_key_tabbq))
-			{
-				$error++;
-				setEventMessages($langs->trans('ErrorAccountancyCodeOnBankAccountNotDefined', $obj->baref), null, 'errors');
-			}
-			reset($tabtp[$obj->rowid]);
-			$first_key_tabtp = key($tabtp[$obj->rowid]);
-			if (empty($first_key_tabtp))
-			{
-				$error++;
-				setEventMessages($langs->trans('ErrorAccountancyCodeOnThirdPartyNotDefined'), null, 'errors');
-			}
-		}*/
-
 		// if($obj->socid)$tabtp[$obj->rowid][$compta_soc] += $amounttouse;
 
 		$i++;
@@ -640,7 +624,7 @@ if ($result) {
 //var_dump($tabtype);
 
 // Write bookkeeping
-if (!$error && $action == 'writebookkeeping') {
+if (!$error && $action == 'writebookkeeping' && $user->hasRight('accounting', 'bind', 'write')) {
 	$now = dol_now();
 
 	$accountingaccountcustomer = new AccountingAccount($db);
@@ -974,7 +958,7 @@ if (!$error && $action == 'writebookkeeping') {
 
 
 // Export
-if ($action == 'exportcsv') {		// ISO and not UTF8 !
+if ($action == 'exportcsv' && $user->hasRight('accounting', 'bind', 'write')) {		// ISO and not UTF8 !
 	$sep = getDolGlobalString('ACCOUNTING_EXPORT_SEPARATORCSV');
 
 	$filename = 'journal';

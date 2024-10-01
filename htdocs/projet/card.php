@@ -4,8 +4,8 @@
  * Copyright (C) 2005-2012 Regis Houssin        <regis.houssin@inodbox.com>
  * Copyright (C) 2023      Charlene Benke       <charlene@patas_monkey.com>
  * Copyright (C) 2023      Christian Foellmann  <christian@foellmann.de>
- * Copyright (C) 2024		MDW							<mdeweerd@users.noreply.github.com>
- * Copyright (C) 2024       Frédéric France             <frederic.france@free.fr>
+ * Copyright (C) 2024      MDW                  <mdeweerd@users.noreply.github.com>
+ * Copyright (C) 2024      Frédéric France      <frederic.france@free.fr>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,10 +56,10 @@ $backtopagejsfields = GETPOST('backtopagejsfields', 'alpha');
 $cancel = GETPOST('cancel', 'alpha');
 $confirm = GETPOST('confirm', 'aZ09');
 
-$dol_openinpopup = 0;
+$dol_openinpopup = '';
 if (!empty($backtopagejsfields)) {
 	$tmpbacktopagejsfields = explode(':', $backtopagejsfields);
-	$dol_openinpopup = $tmpbacktopagejsfields[0];
+	$dol_openinpopup = preg_replace('/[^a-z0-9_]/i', '', $tmpbacktopagejsfields[0]);
 }
 
 $status = GETPOSTINT('status');
@@ -1443,7 +1443,9 @@ if ($action == 'create' && $user->hasRight('projet', 'creer')) {
 
 		// Description
 		print '<td class="titlefield tdtop">'.$langs->trans("Description").'</td><td>';
-		print dol_htmlentitiesbr($object->description);
+		print '<div class="longmessagecut">';
+		print dolPrintHTML($object->description);
+		print '</div>';
 		print '</td></tr>';
 
 		// Categories

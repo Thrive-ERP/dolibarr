@@ -930,11 +930,12 @@ function getSocialNetworkHeaderCards($params = null)
 /**
  * Return HTML content to add structured data for an article, news or Blog Post.
  *
+ * @param	string	$socialnetworks			'' or list of social networks
  * @return  string							HTML content
  */
-function getSocialNetworkSharingLinks()
+function getSocialNetworkSharingLinks($socialnetworks = '')
 {
-	global $conf, $db, $hookmanager, $langs, $mysoc, $user, $website, $websitepage, $weblangs; // Very important. Required to have var available when running included containers.
+	global $website, $websitepage; // Very important. Required to have var available when running included containers.
 
 	$out = '<!-- section for social network sharing of page -->'."\n";
 
@@ -945,37 +946,30 @@ function getSocialNetworkSharingLinks()
 		$out .= '<div class="dol-social-share">'."\n";
 
 		// Twitter
-		$out .= '<div class="dol-social-share-tw">'."\n";
-		$out .= '<a href="https://twitter.com/share" class="twitter-share-button" data-url="'.$fullurl.'" data-text="'.dol_escape_htmltag($websitepage->description).'" data-lang="'.$websitepage->lang.'" data-size="small" data-related="" data-hashtags="'.preg_replace('/^#/', '', $hashtags).'" data-count="horizontal">Tweet</a>';
-		$out .= '<script nonce="'.getNonce().'">!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?\'http\':\'https\';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+\'://platform.twitter.com/widgets.js\';fjs.parentNode.insertBefore(js,fjs);}}(document, \'script\', \'twitter-wjs\');</script>';
-		$out .= '</div>'."\n";
+		if (empty($socialnetworks) || preg_match('/twitter/', $socialnetworks)) {
+			$out .= '<div class="dol-social-share-tw">'."\n";
+			$out .= '<a href="https://twitter.com/share" class="twitter-share-button" data-url="'.$fullurl.'" data-text="'.dol_escape_htmltag($websitepage->description).'" data-lang="'.$websitepage->lang.'" data-size="small" data-related="" data-hashtags="'.preg_replace('/^#/', '', $hashtags).'" data-count="horizontal">Tweet</a>';
+			$out .= '<script nonce="'.getNonce().'">!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?\'http\':\'https\';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+\'://platform.twitter.com/widgets.js\';fjs.parentNode.insertBefore(js,fjs);}}(document, \'script\', \'twitter-wjs\');</script>';
+			$out .= '</div>'."\n";
+		}
 
 		// Reddit
-		$out .= '<div class="dol-social-share-reddit">'."\n";
-		$out .= '<a href="https://www.reddit.com/submit" target="_blank" rel="noopener noreferrer external" onclick="window.location = \'https://www.reddit.com/submit?url='.$fullurl.'\'; return false">';
-		$out .= '<span class="dol-social-share-reddit-span">Reddit</span>';
-		$out .= '</a>';
-		$out .= '</div>'."\n";
+		if (empty($socialnetworks) || preg_match('/reddit/', $socialnetworks)) {
+			$out .= '<div class="dol-social-share-reddit">'."\n";
+			$out .= '<a href="https://www.reddit.com/submit" target="_blank" rel="noopener noreferrer external" onclick="window.location = \'https://www.reddit.com/submit?url='.urlencode($fullurl).'\'; return false">';
+			$out .= '<span class="dol-social-share-reddit-span">Reddit</span>';
+			$out .= '</a>';
+			$out .= '</div>'."\n";
+		}
 
 		// Facebook
-		$out .= '<div class="dol-social-share-fbl">'."\n";
-		$out .= '<div id="fb-root"></div>'."\n";
-		$out .= '<script nonce="'.getNonce().'">(function(d, s, id) {
-				  var js, fjs = d.getElementsByTagName(s)[0];
-				  if (d.getElementById(id)) return;
-				  js = d.createElement(s); js.id = id;
-				  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.0&amp;appId=dolibarr.org";
-				  fjs.parentNode.insertBefore(js, fjs);
-				}(document, \'script\', \'facebook-jssdk\'));</script>
-				        <fb:like
-				        href="'.$fullurl.'"
-				        layout="button_count"
-				        show_faces="false"
-				        width="90"
-				        colorscheme="light"
-				        share="1"
-				        action="like" ></fb:like>'."\n";
-		$out .= '</div>'."\n";
+		if (empty($socialnetworks) || preg_match('/facebook/', $socialnetworks)) {
+			$out .= '<div class="dol-social-share-fbl">'."\n";
+			$out .= '<a href="https://www.facebook.com/sharer/sharer.php?u='.urlencode($fullurl).'">';
+			$out .= '<span class="dol-social-share-fbl-span">Facebook</span>';
+			$out .= '</a>';
+			$out .= '</div>';
+		}
 
 		$out .= "\n</div>\n";
 	} else {
@@ -1029,7 +1023,7 @@ function getNbOfImagePublicURLOfObject($object)
  * @param	int		$no				Numero of image (if there is several images. 1st one by default)
  * @param   string  $extName        Extension to differentiate thumb file name ('', '_small', '_mini')
  * @return  string					HTML img content or '' if no image found
- * @see getNbOfImagePublicURLOfObject()
+ * @see getNbOfImagePublicURLOfObject(), getImageFromHtmlContent()
  */
 function getImagePublicURLOfObject($object, $no = 1, $extName = '')
 {
@@ -1319,6 +1313,48 @@ function getPagesFromSearchCriterias($type, $algo, $searchstring, $max = 25, $so
 	}
 
 	return $arrayresult;
+}
+
+/**
+ * Return the URL of an image found into a HTML content.
+ * To get image from an external URL to download first, see getAllImages()
+ *
+ * @param	string		$htmlContent	HTML content
+ * @param	int			$imageNumber	The position of image. 1 by default = first image found
+ * @return	string						URL of image or '' if not foud
+ * @see getImagePublicURLOfObject()
+ */
+function getImageFromHtmlContent($htmlContent, $imageNumber = 1)
+{
+	$dom = new DOMDocument();
+
+	libxml_use_internal_errors(false);	// Avoid to fill memory with xml errors
+	if (LIBXML_VERSION < 20900) {
+		// Avoid load of external entities (security problem).
+		// Required only if LIBXML_VERSION < 20900
+		// @phan-suppress-next-line PhanDeprecatedFunctionInternal
+		libxml_disable_entity_loader(true);
+	}
+
+	// Load HTML content into object
+	$dom->loadHTML($htmlContent);
+
+	// Re-enable HTML load errors
+	libxml_clear_errors();
+
+	// Load all img tags
+	$images = $dom->getElementsByTagName('img');
+
+	// Check if nb of image is valid
+	if ($imageNumber > 0 && $imageNumber <= $images->length) {
+		// Récupère l'image correspondante (index - 1 car $imageNumber est 1-based)
+		$img = $images->item($imageNumber - 1);
+		if ($img instanceof DOMElement) {
+			return $img->getAttribute('src');
+		}
+	}
+
+	return '';
 }
 
 /**

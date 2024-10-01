@@ -82,6 +82,7 @@ class mod_task_universal extends ModeleNumRefTask
 		$tooltip .= $langs->trans("GenericMaskCodes3");
 		$tooltip .= $langs->trans("GenericMaskCodes4a", $langs->transnoentities("Task"), $langs->transnoentities("Task"));
 		$tooltip .= $langs->trans("GenericMaskCodes5");
+		$tooltip .= '<br>'.$langs->trans("GenericMaskCodes5b");
 
 		// Parametrage du prefix
 		$texte .= '<tr><td>'.$langs->trans("Mask").':</td>';
@@ -120,9 +121,9 @@ class mod_task_universal extends ModeleNumRefTask
 	/**
 	 *  Return next value
 	 *
-	 *  @param	Societe|string	$objsoc		Object third party
-	 *  @param	Task|string		$object	    Object task
-	 *  @return string|0					Value if OK, 0 if KO
+	 *  @param	null|Societe|string	$objsoc	Object third party
+	 *  @param	null|Task|string	$object	Object Task
+	 *  @return	string|int<-1,0>			Value if OK, <=0 if KO
 	 */
 	public function getNextValue($objsoc = '', $object = '')
 	{

@@ -109,7 +109,7 @@ $confirm 	= GETPOST('confirm', 'alpha');
 $dol_openinpopup = '';
 if (!empty($backtopagejsfields)) {
 	$tmpbacktopagejsfields = explode(':', $backtopagejsfields);
-	$dol_openinpopup = $tmpbacktopagejsfields[0];
+	$dol_openinpopup = preg_replace('/[^a-z0-9_]/i', '', $tmpbacktopagejsfields[0]);
 }
 
 $socid = GETPOSTINT('socid') ? GETPOSTINT('socid') : GETPOSTINT('id');
@@ -235,20 +235,20 @@ if (empty($reshook)) {
 		$_POST["supplier_code"] = "Acompleter";
 	}
 
-	if ($action == 'set_localtax1') {
+	if ($action == 'set_localtax1' && $user->hasRight('societe', 'creer')) {
 		//get selected from combobox
 		$value = GETPOST('lt1');
 		$object->fetch($socid);
 		$res = $object->setValueFrom('localtax1_value', $value, '', null, 'text', '', $user, 'COMPANY_MODIFY');
 	}
-	if ($action == 'set_localtax2') {
+	if ($action == 'set_localtax2' && $user->hasRight('societe', 'creer')) {
 		//get selected from combobox
 		$value = GETPOST('lt2');
 		$object->fetch($socid);
 		$res = $object->setValueFrom('localtax2_value', $value, '', null, 'text', '', $user, 'COMPANY_MODIFY');
 	}
 
-	if ($action == 'update_extras') {
+	if ($action == 'update_extras' && $user->hasRight('societe', 'creer')) {
 		$object->fetch($socid);
 
 		$object->oldcopy = dol_clone($object, 2);
@@ -275,8 +275,7 @@ if (empty($reshook)) {
 	}
 
 	// Add new or update third party
-	if ((!GETPOST('getcustomercode') && !GETPOST('getsuppliercode'))
-	&& ($action == 'add' || $action == 'update') && $user->hasRight('societe', 'creer')) {
+	if ((!GETPOST('getcustomercode') && !GETPOST('getsuppliercode')) && ($action == 'add' || $action == 'update') && $user->hasRight('societe', 'creer')) {
 		require_once DOL_DOCUMENT_ROOT.'/core/lib/functions2.lib.php';
 
 		if (!GETPOST('name')) {
@@ -321,7 +320,7 @@ if (empty($reshook)) {
 			} else {
 				$object->name				= GETPOST('name', 'alphanohtml');
 			}
-			$object->entity					= (GETPOSTISSET('entity') ? GETPOSTINT('entity') : $conf->entity);
+			$object->entity					= ((GETPOSTISSET('entity') && GETPOST('entity') != '') ? GETPOSTINT('entity') : $conf->entity);
 			$object->name_alias				= GETPOST('name_alias', 'alphanohtml');
 			$object->parent					= GETPOSTISSET('parent_company_id') ? GETPOSTINT('parent_company_id') : $object->parent;
 			$object->address				= GETPOST('address', 'alphanohtml');
@@ -432,6 +431,11 @@ if (empty($reshook)) {
 				$current_logo = $object->logo;
 				$object->logo = dol_sanitizeFileName($_FILES['photo']['name']);
 			}
+			if (GETPOST('deletephoto')) {
+				$current_logo = $object->logo;
+				$object->logo = '';
+			}
+
 
 			// Check parameters
 			if (!GETPOST('cancel', 'alpha')) {
@@ -1189,6 +1193,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 					}
 
                     $("#selectcountry_id").change(function() {
+						console.log("selectcountry_id change");
                        	document.formsoc.action.value="create";
                        	document.formsoc.submit();
                     });
@@ -1198,7 +1203,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 
 		dol_htmloutput_mesg(is_numeric($error) ? '' : $error, $errors, 'error');
 
-		print '<form enctype="multipart/form-data" action="'.$_SERVER["PHP_SELF"].'" method="post" name="formsoc" autocomplete="off">'; // Chrome ignor autocomplete
+		print '<form enctype="multipart/form-data" action="'.$_SERVER["PHP_SELF"].'" method="post" name="formsoc" autocomplete="off">'; // Chrome ignores autocomplete
 
 		print '<input type="hidden" name="action" value="add">';
 		print '<input type="hidden" name="token" value="'.newToken().'">';
@@ -1451,7 +1456,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 			// Country
 			print '<tr><td>'.$form->editfieldkey('Country', 'selectcountry_id', '', $object, 0).'</td><td colspan="3" class="maxwidthonsmartphone">';
 			print img_picto('', 'country', 'class="pictofixedwidth"');
-			print $form->select_country((GETPOSTISSET('country_id') ? GETPOST('country_id') : $object->country_id), 'country_id', '', 0, 'minwidth300 maxwidth500 widthcentpercentminusx');
+			print $form->select_country((GETPOSTISSET('country_id') ? GETPOST('country_id') : $object->country_id), 'country_id', '', 0, 'minwidth200 maxwidth300 widthcentpercentminusx');
 			if ($user->admin) {
 				print info_admin($langs->trans("YouCanChangeValuesForThisListFromDictionarySetup"), 1);
 			}
@@ -1467,7 +1472,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 
 				if ($object->country_id) {
 					print img_picto('', 'state', 'class="pictofixedwidth"');
-					print $formcompany->select_state($object->state_id, $object->country_code);
+					print $formcompany->select_state($object->state_id, $object->country_code, 'state_id', 'minwidth200 maxwidth300 widthcentpercentminusx');
 				} else {
 					print $countrynotdefined;
 				}
@@ -2032,6 +2037,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 				}
 
        			$("#selectcountry_id").change(function() {
+					console.log("selectcountry_id change");
        				document.formsoc.action.value="edit";
       				document.formsoc.submit();
         			});
@@ -2522,7 +2528,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 				print '<td>'.$form->editfieldkey('Logo', 'photoinput', '', $object, 0).'</td>';
 				print '<td colspan="3">';
 				if ($object->logo) {
-					print $form->showphoto('societe', $object);
+					print $form->showphoto('societe', $object, 100, 0, 0, 'inline-block');
 				}
 				$caneditfield = 1;
 				if ($caneditfield) {
@@ -2531,7 +2537,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 					}
 					print '<table class="nobordernopadding">';
 					if ($object->logo) {
-						print '<tr><td><input type="checkbox" class="flat photodelete" name="deletephoto" id="photodelete"> <label for="photodelete">'.$langs->trans("Delete").'</photo><br><br></td></tr>';
+						print '<tr><td><input type="checkbox" class="flat photodelete" name="deletephoto" id="photodelete"> <label for="photodelete">'.$langs->trans("Delete").'</photo><br></td></tr>';
 					}
 					//print '<tr><td>'.$langs->trans("PhotoFile").'</td></tr>';
 					print '<tr><td>';
@@ -2567,7 +2573,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 
 					if (isModEnabled('accounting')) {
 						// Accountancy_code_sell
-						print '<tr><td class="titlefield">'.$langs->trans("ProductAccountancySellCode").'</td>';
+						print '<tr><td>'.$langs->trans("ProductAccountancySellCode").'</td>';
 						print '<td>';
 						print $formaccounting->select_account($object->accountancy_code_sell, 'accountancy_code_sell', 1, '', 1, 1);
 						print '</td></tr>';
@@ -2579,7 +2585,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 						print '</td></tr>';
 					} else { // For external software
 						// Accountancy_code_sell
-						print '<tr><td class="titlefield">'.$langs->trans("ProductAccountancySellCode").'</td>';
+						print '<tr><td>'.$langs->trans("ProductAccountancySellCode").'</td>';
 						print '<td><input name="accountancy_code_sell" class="maxwidth200" value="'.$object->accountancy_code_sell.'">';
 						print '</td></tr>';
 
@@ -2665,7 +2671,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 			print '<table class="border tableforfield centpercent">';
 
 			// Type Prospect/Customer/Supplier
-			print '<tr><td class="titlefieldhalf">'.$langs->trans('NatureOfThirdParty').'</td><td>';
+			print '<tr><td class="titlefieldmiddle">'.$langs->trans('NatureOfThirdParty').'</td><td>';
 			print $object->getTypeUrl(1);
 			print '</td></tr>';
 
@@ -2916,7 +2922,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 			if (isModEnabled('category') && $user->hasRight('categorie', 'lire')) {
 				// Customer
 				if ($object->prospect || $object->client || getDolGlobalString('THIRDPARTY_CAN_HAVE_CUSTOMER_CATEGORY_EVEN_IF_NOT_CUSTOMER_PROSPECT')) {
-					print '<tr><td>'.$langs->trans("CustomersCategoriesShort").'</td>';
+					print '<tr><td class="titlefieldmiddle">'.$langs->trans("CustomersCategoriesShort").'</td>';
 					print '<td>';
 					print $form->showCategories($object->id, Categorie::TYPE_CUSTOMER, 1);
 					print "</td></tr>";
@@ -2924,7 +2930,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 
 				// Supplier
 				if (((isModEnabled("fournisseur") && $user->hasRight('fournisseur', 'lire') && !getDolGlobalString('MAIN_USE_NEW_SUPPLIERMOD')) || (isModEnabled("supplier_order") && $user->hasRight('supplier_order', 'lire')) || (isModEnabled("supplier_invoice") && $user->hasRight('supplier_invoice', 'lire'))) && $object->fournisseur) {
-					print '<tr><td>'.$langs->trans("SuppliersCategoriesShort").'</td>';
+					print '<tr><td class="titlefieldmiddle">'.$langs->trans("SuppliersCategoriesShort").'</td>';
 					print '<td>';
 					print $form->showCategories($object->id, Categorie::TYPE_SUPPLIER, 1);
 					print "</td></tr>";
@@ -2933,7 +2939,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 
 
 			// Third-Party Type
-			print '<tr><td>';
+			print '<tr><td class="titlefieldmiddle">';
 			print '<table class="nobordernopadding" width="100%"><tr><td>'.$langs->trans('ThirdPartyType').'</td>';
 			if ($action != 'editthirdpartytype' && $user->hasRight('societe', 'creer')) {
 				print '<td class="right"><a class="editfielda" href="'.$_SERVER["PHP_SELF"].'?action=editthirdpartytype&token='.newToken().'&socid='.$object->id.'">'.img_edit($langs->transnoentitiesnoconv('Edit'), 1).'</a></td>';
@@ -2950,7 +2956,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 			}
 
 			// Legal
-			print '<tr><td class="titlefield">'.$langs->trans('JuridicalStatus').'</td><td>'.$object->forme_juridique.'</td></tr>';
+			print '<tr><td>'.$langs->trans('JuridicalStatus').'</td><td>'.dolPrintHTML($object->forme_juridique).'</td></tr>';
 
 			// Capital
 			print '<tr><td>'.$langs->trans('Capital').'</td><td>';
@@ -3166,15 +3172,13 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($canvasdisplayactio
 
 				print dolGetButtonAction($langs->trans('MergeThirdparties'), $langs->trans('Merge'), 'danger', $_SERVER["PHP_SELF"].'?socid='.$object->id.'&action=merge&token='.newToken(), '', $permissiontodelete);
 
-				if ($user->hasRight('societe', 'supprimer')) {
-					$deleteUrl = $_SERVER["PHP_SELF"].'?socid='.$object->id.'&action=delete&token='.newToken();
-					$buttonId = 'action-delete-no-ajax';
-					if ($conf->use_javascript_ajax && empty($conf->dol_use_jmobile)) {	// We can't use preloaded confirm form with jmobile
-						$deleteUrl = '';
-						$buttonId = 'action-delete';
-					}
-					print dolGetButtonAction('', $langs->trans('Delete'), 'delete', $deleteUrl, $buttonId, $permissiontodelete);
+				$deleteUrl = $_SERVER["PHP_SELF"].'?socid='.$object->id.'&action=delete&token='.newToken();
+				$buttonId = 'action-delete-no-ajax';
+				if ($conf->use_javascript_ajax && empty($conf->dol_use_jmobile)) {	// We can't use preloaded confirm form with jmobile
+					$deleteUrl = '';
+					$buttonId = 'action-delete';
 				}
+				print dolGetButtonAction('', $langs->trans('Delete'), 'delete', $deleteUrl, $buttonId, $permissiontodelete);
 			}
 
 			print '</div>'."\n";

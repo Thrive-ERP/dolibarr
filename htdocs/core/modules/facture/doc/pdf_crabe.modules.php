@@ -928,7 +928,6 @@ class pdf_crabe extends ModelePDFFactures
 	protected function _tableau_versements(&$pdf, $object, $posy, $outputlangs, $heightforfooter = 0)
 	{
 		// phpcs:enable
-		global $conf;
 
 		$sign = 1;
 		if ($object->type == 2 && getDolGlobalString('INVOICE_POSITIVE_CREDIT_NOTE')) {
@@ -1578,7 +1577,7 @@ class pdf_crabe extends ModelePDFFactures
 				}
 
 				// Revenue stamp
-				if (price2num($object->revenuestamp) != 0) {
+				if (price2num($object->revenuestamp, 'MT') != 0) {
 					$index++;
 					$pdf->SetXY($col1x, $tab2_top + $tab2_hl * $index);
 					$pdf->MultiCell($col2x - $col1x, $tab2_hl, $outputlangs->transnoentities("RevenueStamp"), $useborder, 'L', 1);
@@ -2038,7 +2037,7 @@ class pdf_crabe extends ModelePDFFactures
 				$posy += 4;
 				$pdf->SetXY($posx, $posy);
 				$pdf->SetTextColor(0, 0, 60);
-				$pdf->MultiCell($w, 3, $langs->transnoentities("SalesRepresentative")." : ".$usertmp->getFullName($langs), '', 'R');
+				$pdf->MultiCell($w, 3, $outputlangs->transnoentities("SalesRepresentative")." : ".$usertmp->getFullName($langs), '', 'R');
 			}
 		}
 
@@ -2176,6 +2175,8 @@ class pdf_crabe extends ModelePDFFactures
 				if (!empty($carac_client_shipping)) {
 					$posy += $hautcadre;
 
+					$hautcadre -= 10;	// Height for the shipping address does not need to be as high as main box
+
 					// Show shipping frame
 					$pdf->SetXY($posx + 2, $posy - 5);
 					$pdf->SetFont('', '', $default_font_size - 2);
@@ -2193,7 +2194,8 @@ class pdf_crabe extends ModelePDFFactures
 					$pdf->SetXY($posx + 2, $posy);
 					$pdf->SetFont('', '', $default_font_size - 1);
 					$pdf->MultiCell($widthrecbox - 2, 2, $carac_client_shipping, '', 'L');
-					$top_shift += $hautcadre;
+
+					$top_shift += $hautcadre + 10;
 				}
 			}
 		}

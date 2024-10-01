@@ -2,6 +2,7 @@
 /* Copyright (C) 2004-2005 Rodolphe Quiedeville <rodolphe@quiedeville.org>
  * Copyright (C) 2005-2016 Laurent Destailleur  <eldy@users.sourceforge.net>
  * Copyright (C) 2005-2016 Regis Houssin        <regis.houssin@inodbox.com>
+ * Copyright (C) 2024		MDW							<mdeweerd@users.noreply.github.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -163,14 +164,21 @@ if ($modulepart == 'fckeditor') {
  */
 
 if (GETPOST("cache", 'alpha')) {
-	// Important: Following code is to avoid page request by browser and PHP CPU at each Dolibarr page access.
-	// Add param cache=abcdef
+	// Important: The following code is to avoid a page request by the browser and PHP CPU at each Dolibarr page access.
+	// We are here when param cache=xxx to force a cache policy:
+	//  xxx=1 means cache of 3600s
+	//  xxx=abcdef or 123456789 means a cache of 1 week (the key will be modified to get break cache use)
 	if (empty($dolibarr_nocache)) {
-		header('Cache-Control: max-age=3600, public, must-revalidate');
+		if (GETPOST('cache', 'alpha') != '1') {
+			$delaycache = 3600 * 24 * 7;
+		} else {
+			$delaycache = 3600;
+		}
+		header('Cache-Control: max-age='.$delaycache.', public, must-revalidate');
 		header('Pragma: cache'); // This is to avoid to have Pragma: no-cache set by proxy or web server
-		header('Expires: '.gmdate('D, d M Y H:i:s', time() + 3600).' GMT');	// This is to avoid to have Expires set by proxy or web server
-		//header('Expires: '.strtotime('+1 hour');
+		header('Expires: '.gmdate('D, d M Y H:i:s', time() + $delaycache).' GMT');	// This is to avoid to have Expires set by proxy or web server
 	} else {
+		// If any cache on files were disable by config file (for test purpose)
 		header('Cache-Control: no-cache');
 	}
 	//print $dolibarr_nocache; exit;
@@ -312,6 +320,22 @@ if ($modulepart == 'barcode') {
 	} else {
 		$code = GETPOST("code", 'restricthtml'); // This can be rich content (qrcode, datamatrix, ...)
 	}
+
+	// If $code is virtualcard_xxx_999.vcf, it is a file to read to get code
+	$reg = array();
+	if (preg_match('/^virtualcard_([^_]+)_(\d+)\.vcf$/', $code, $reg)) {
+		$vcffile = '';
+		if ($reg[1] == 'user') {
+			$vcffile = $conf->user->dir_temp.'/'.$code;
+		} elseif ($reg[1] == 'contact') {
+			$vcffile = $conf->contact->dir_temp.'/'.$code;
+		}
+
+		if ($vcffile) {
+			$code = file_get_contents($vcffile);
+		}
+	}
+
 
 	if (empty($generator) || empty($encoding)) {
 		print 'Error: Parameter "generator" or "encoding" not defined';

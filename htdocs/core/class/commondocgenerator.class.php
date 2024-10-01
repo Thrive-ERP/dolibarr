@@ -361,6 +361,10 @@ abstract class CommonDocGenerator
 		// phpcs:enable
 		global $extrafields;
 
+		if (!is_object($object)) {
+			return array();
+		}
+
 		if (empty($object->country) && !empty($object->country_code)) {
 			$object->country = $outputlangs->transnoentitiesnoconv("Country".$object->country_code);
 		}
@@ -1492,6 +1496,9 @@ abstract class CommonDocGenerator
 				$field = new stdClass();
 				$field->rank = intval($extrafields->attributes[$object->table_element]['pos'][$key]);
 				$field->content = $this->getExtrafieldContent($object, $key, $outputlangs);
+				if (isset($extrafields->attributes[$object->table_element]['langfile'][$key])) {
+					$outputlangs->load($extrafields->attributes[$object->table_element]['langfile'][$key]);
+				}
 				$field->label = $outputlangs->transnoentities($label);
 				$field->type = $extrafields->attributes[$object->table_element]['type'][$key];
 

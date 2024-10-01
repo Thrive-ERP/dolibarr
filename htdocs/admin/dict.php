@@ -99,7 +99,7 @@ $confirm = GETPOST('confirm', 'alpha');
 
 $id = GETPOSTINT('id');
 $rowid = GETPOST('rowid', 'alpha');
-$entity = GETPOSTINT('entity');
+$entity = GETPOST('entity', 'alpha');	// Do not use GETPOSTINT here. Should be '', 0 or >0.
 $code = GETPOST('code', 'alpha');
 $from = GETPOST('from', 'alpha');
 
@@ -282,7 +282,7 @@ $tabsql[DICT_TYPE_RESOURCE] = "SELECT t.rowid as rowid, t.code, t.label, t.activ
 $tabsql[DICT_TYPE_CONTAINER] = "SELECT t.rowid as rowid, t.code, t.label, t.active, t.module FROM ".MAIN_DB_PREFIX."c_type_container as t WHERE t.entity IN (".getEntity($tabname[DICT_TYPE_CONTAINER]).")";
 //$tabsql[DICT_UNITS]= "SELECT t.rowid as rowid, t.code, t.label, t.short_label, t.active FROM ".MAIN_DB_PREFIX."c_units as t";
 $tabsql[DICT_STCOMM] = "SELECT t.id    as rowid, t.code, t.libelle, t.picto, t.active FROM ".MAIN_DB_PREFIX."c_stcomm as t";
-$tabsql[DICT_HOLIDAY_TYPES] = "SELECT h.rowid as rowid, h.code, h.label, h.affect, h.delay, h.newbymonth, h.fk_country as country_id, c.code as country_code, c.label as country, h.block_if_negative, h.sortorder, h.active FROM ".MAIN_DB_PREFIX."c_holiday_types as h LEFT JOIN ".MAIN_DB_PREFIX."c_country as c ON h.fk_country=c.rowid";
+$tabsql[DICT_HOLIDAY_TYPES] = "SELECT h.rowid as rowid, h.code, h.label, h.affect, h.delay, h.newbymonth, h.fk_country as country_id, c.code as country_code, c.label as country, h.block_if_negative, h.sortorder, h.active FROM ".MAIN_DB_PREFIX."c_holiday_types as h LEFT JOIN ".MAIN_DB_PREFIX."c_country as c ON h.fk_country=c.rowid WHERE h.entity IN (".getEntity($tabname[DICT_HOLIDAY_TYPES]).")";
 $tabsql[DICT_LEAD_STATUS] = "SELECT t.rowid as rowid, t.code, t.label, percent, t.position, t.active FROM ".MAIN_DB_PREFIX."c_lead_status as t";
 $tabsql[DICT_FORMAT_CARDS] = "SELECT t.rowid, t.code, t.name, t.paper_size, t.orientation, t.metric, t.leftmargin, t.topmargin, t.nx, t.ny, t.spacex, t.spacey, t.width, t.height, t.font_size, t.custom_x, t.custom_y, t.active FROM ".MAIN_DB_PREFIX."c_format_cards as t";
 $tabsql[DICT_INVOICE_SUBTYPE] = "SELECT t.rowid, t.code, t.label, c.label as country, c.code as country_code, t.fk_country as country_id, t.active FROM ".MAIN_DB_PREFIX."c_invoice_subtype as t, ".MAIN_DB_PREFIX."c_country as c WHERE t.fk_country = c.rowid";
@@ -470,7 +470,7 @@ $tabfieldinsert[DICT_TYPE_RESOURCE] = "code,label";
 $tabfieldinsert[DICT_TYPE_CONTAINER] = "code,label,entity";
 //$tabfieldinsert[DICT_UNITS]= "code,label,short_label";
 $tabfieldinsert[DICT_STCOMM] = "code,libelle,picto";
-$tabfieldinsert[DICT_HOLIDAY_TYPES] = "code,label,affect,delay,newbymonth,fk_country,block_if_negative,sortorder";
+$tabfieldinsert[DICT_HOLIDAY_TYPES] = "code,label,affect,delay,newbymonth,fk_country,block_if_negative,sortorder,entity";
 $tabfieldinsert[DICT_LEAD_STATUS] = "code,label,percent,position";
 $tabfieldinsert[DICT_FORMAT_CARDS] = "code,name,paper_size,orientation,metric,leftmargin,topmargin,nx,ny,spacex,spacey,width,height,font_size,custom_x,custom_y";
 $tabfieldinsert[DICT_INVOICE_SUBTYPE] = "fk_country,code,label";
@@ -656,7 +656,7 @@ foreach ($tabcomplete as $key => $value) {
 		continue;
 	}
 	$tabcomplete[$key]['id'] = $i;
-	// TODO Comment the line when data is stored into the tabcomplete array
+	// TODO Comment this lines when data is stored into the tabcomplete array
 	$tabcomplete[$key]['cond'] = $tabcond[$i];
 	$tabcomplete[$key]['rowid'] = $tabrowid[$i];
 	$tabcomplete[$key]['fieldinsert'] = $tabfieldinsert[$i];
@@ -2243,8 +2243,8 @@ if ($id > 0) {
 					if (!is_null($withentity)) {
 						print '<input type="hidden" name="entity" value="'.$withentity.'">';
 					}
-					print '<input type="submit" class="button button-edit small" name="actionmodify" value="'.$langs->trans("Modify").'">';
-					print '<input type="submit" class="button button-cancel small" name="actioncancel" value="'.$langs->trans("Cancel").'">';
+					print '<input type="submit" class="button button-edit smallpaddingimp" name="actionmodify" value="'.$langs->trans("Modify").'">';
+					print '<input type="submit" class="button button-cancel smallpaddingimp" name="actioncancel" value="'.$langs->trans("Cancel").'">';
 					print '</td>';
 				} else {
 					$tmpaction = 'view';
@@ -2297,8 +2297,10 @@ if ($id > 0) {
 							} elseif ($value == 'price' || preg_match('/^amount/i', $value)) {
 								$valuetoshow = price($valuetoshow);
 							}
-							if ($value == 'private') {
-								$valuetoshow = yn($valuetoshow);
+							if (in_array($value, array('private', 'joinfile', 'use_default'))) {
+								if ($valuetoshow) {
+									$valuetoshow = yn($valuetoshow);
+								}
 							} elseif ($value == 'libelle_facture') {
 								$langs->load("bills");
 								$key = $langs->trans("PaymentCondition".strtoupper($obj->code));

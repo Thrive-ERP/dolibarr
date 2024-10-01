@@ -156,7 +156,7 @@ $TDurationTypes = array('y' => $langs->trans('Years'), 'm' => $langs->trans('Mon
 
 $result = restrictedArea($user, 'agenda', $object, 'actioncomm&societe', 'myactions|allactions', 'fk_soc', 'id');
 
-$usercancreate = $user->hasRight('agenda', 'allactions', 'create') || (($object->authorid == $user->id || $object->userownerid == $user->id) && $user->hasRight('agenda', 'myactions', 'create'));
+$usercancreate = $user->hasRight('agenda', 'allactions', 'create') || ((empty($object->id) || $object->authorid == $user->id || $object->userownerid == $user->id) && $user->hasRight('agenda', 'myactions', 'create'));
 
 
 /*
@@ -185,10 +185,10 @@ if (empty($reshook) && (GETPOST('removedassigned') || GETPOST('removedassigned')
 
 	$_SESSION['assignedtouser'] = json_encode($tmpassigneduserids);
 	$donotclearsession = 1;
-	if ($action == 'add') {
+	if ($action == 'add') {		// Test on permission not required here
 		$action = 'create';
 	}
-	if ($action == 'update') {
+	if ($action == 'update') {	// Test on permission not required here
 		$action = 'edit';
 	}
 
@@ -212,10 +212,10 @@ if (empty($reshook) && (GETPOST('removedassignedresource') || GETPOST('removedas
 
 	$_SESSION['assignedtoresource'] = json_encode($tmpassignedresourceids);
 	$donotclearsessionresource = 1;
-	if ($action == 'add') {
+	if ($action == 'add' && $usercancreate) {
 		$action = 'create';
 	}
-	if ($action == 'update') {
+	if ($action == 'update' && $usercancreate) {
 		$action = 'edit';
 	}
 
@@ -234,10 +234,10 @@ if (empty($reshook) && (GETPOST('addassignedtouser') || GETPOST('updateassignedt
 		$_SESSION['assignedtouser'] = json_encode($assignedtouser);
 	}
 	$donotclearsession = 1;
-	if ($action == 'add') {
+	if ($action == 'add' && $usercancreate) {
 		$action = 'create';
 	}
-	if ($action == 'update') {
+	if ($action == 'update' && $usercancreate) {
 		$action = 'edit';
 	}
 
@@ -256,10 +256,10 @@ if (empty($reshook) && (GETPOST('addassignedtoresource') || GETPOST('updateassig
 		$_SESSION['assignedtoresource'] = json_encode($assignedtoresource);
 	}
 	$donotclearsession = 1;
-	if ($action == 'add') {
+	if ($action == 'add' && $usercancreate) {
 		$action = 'create';
 	}
-	if ($action == 'update') {
+	if ($action == 'update' && $usercancreate) {
 		$action = 'edit';
 	}
 
@@ -274,7 +274,7 @@ if (empty($reshook) && $action == 'classin' && ($user->hasRight('agenda', 'allac
 }
 
 // Action clone object
-if (empty($reshook) && $action == 'confirm_clone' && $confirm == 'yes') {
+if (empty($reshook) && $action == 'confirm_clone' && $confirm == 'yes' && $usercancreate) {
 	if (1 == 0 && !GETPOST('clone_content') && !GETPOST('clone_receivers')) {
 		setEventMessages($langs->trans("NoCloneOptionsSpecified"), null, 'errors');
 	} else {
@@ -297,7 +297,7 @@ if (empty($reshook) && $action == 'confirm_clone' && $confirm == 'yes') {
 }
 
 // Add event
-if (empty($reshook) && $action == 'add') {
+if (empty($reshook) && $action == 'add' && $usercancreate) {
 	$error = 0;
 
 	if (empty($backtopage)) {
@@ -735,10 +735,8 @@ if (empty($reshook) && $action == 'add') {
 	}
 }
 
-/*
- * Action update event
- */
-if (empty($reshook) && $action == 'update') {
+// Action update event
+if (empty($reshook) && $action == 'update' && $usercancreate) {
 	if (empty($cancel)) {
 		$fulldayevent = GETPOST('fullday');
 		$aphour = GETPOSTINT('aphour');
@@ -995,6 +993,13 @@ if (empty($reshook) && $action == 'update') {
 					// the notification must be created for every user assigned to the event
 					foreach ($object->userassigned as $userassigned) {
 						$actionCommReminder->fk_user = $userassigned['id'];
+
+						// We update the event, so we recreate the notification event.
+						// First we delete all reminders for the user and the type of reminding (all offset dates).
+						$sqldelete = "DELETE FROM ".MAIN_DB_PREFIX."actioncomm_reminder";
+						$sqldelete .= " WHERE fk_user = ".((int) $actionCommReminder->fk_user)." AND fk_actioncomm = ".((int) $object->id)." AND typeremind = '".$db->escape($remindertype)."'";
+						$resqldelete = $db->query($sqldelete);
+
 						$res = $actionCommReminder->create($user);
 
 						if ($res <= 0) {
@@ -1009,13 +1014,14 @@ if (empty($reshook) && $action == 'update') {
 					}
 				}
 
-				unset($_SESSION['assignedtouser']);
-				unset($_SESSION['assignedtoresource']);
-
 				if (!$error) {
+					unset($_SESSION['assignedtouser']);
+					unset($_SESSION['assignedtoresource']);
+
 					$db->commit();
 				} else {
 					$db->rollback();
+					$action = 'edit';
 				}
 			} else {
 				setEventMessages($object->error, $object->errors, 'errors');
@@ -1275,18 +1281,17 @@ if ($action == 'create') {
 	}
 
 	// Title
-	print '<tr><td'.(!getDolGlobalString('AGENDA_USE_EVENT_TYPE') ? ' class="fieldrequired titlefieldcreate"' : '').'>'.$langs->trans("Label").'</td><td><input type="text" id="label" name="label" class="soixantepercent" value="'.GETPOST('label').'"></td></tr>';
+	print '<tr><td'.(!getDolGlobalString('AGENDA_USE_EVENT_TYPE') ? ' class="fieldrequired titlefieldcreate"' : '').'>'.$langs->trans("Title").'</td><td><input type="text" id="label" name="label" class="soixantepercent" value="'.GETPOST('label').'"></td></tr>';
 
 	// Full day
 	print '<tr><td><span class="fieldrequired">'.$langs->trans("Date").'</span></td>';
-	print '<td class="valignmiddle height30 small"><input class="valignmiddle" type="checkbox" id="fullday" name="fullday" '.(GETPOST('fullday') ? ' checked' : '').'><label for="fullday" class="valignmiddle">'.$langs->trans("EventOnFullDay").'</label>';
+	print '<td class="valignmiddle height30"><input class="valignmiddle" type="checkbox" id="fullday" name="fullday" '.(GETPOST('fullday') ? ' checked' : '').'><label for="fullday" class="valignmiddle small">'.$langs->trans("EventOnFullDay").'</label>';
 
 	// Recurring event
 	$userepeatevent = (getDolGlobalInt('MAIN_FEATURES_LEVEL') >= 1 ? 1 : 0);
 	if ($userepeatevent) {
 		// Repeat
-		//print '<tr><td></td><td colspan="3" class="opacitymedium">';
-		print ' &nbsp; &nbsp; &nbsp; &nbsp; <div class="opacitymedium inline-block">';
+		print ' &nbsp; &nbsp; &nbsp; &nbsp; <div class="opacitymedium inline-block small">';
 		print img_picto($langs->trans("Recurrence"), 'recurring', 'style="margin-left: 6px" class="paddingright2"');
 		print '<input type="hidden" name="recurid" value="'.(empty($object->recurid) ? '' : $object->recurid).'">';
 
@@ -1500,7 +1505,7 @@ if ($action == 'create') {
 			print '<input type="hidden" id="socid" name="socid" value="'.GETPOSTINT('socid').'">';
 		} else {
 			$events = array();
-			$events[] = array('method' => 'getContacts', 'url' => dol_buildpath('/core/ajax/contacts.php?showempty=1', 1), 'htmlname' => 'contactid', 'params' => array('add-customer-contact' => 'disabled'));
+			$events[] = array('method' => 'getContacts', 'url' => dol_buildpath('/core/ajax/contacts.php?showempty=1&token='.currentToken(), 1), 'htmlname' => 'contactid', 'params' => array('add-customer-contact' => 'disabled'));
 			//For external user force the company to user company
 			if (!empty($user->socid)) {
 				print img_picto('', 'company', 'class="paddingrightonly"').$form->select_company($user->socid, 'socid', '', 1, 1, 0, $events, 0, 'minwidth300 widthcentpercentminusxx maxwidth500');
@@ -1971,6 +1976,7 @@ if ($id > 0) {
 				$listofuserid = json_decode($_SESSION['assignedtouser'], true);
 			}
 		}
+
 		$listofcontactid = $object->socpeopleassigned; // Contact assigned
 		$listofotherid = $object->otherassigned; // Other undefined email (not used yet)
 
@@ -2025,7 +2031,7 @@ if ($id > 0) {
 			print '<td>';
 			print '<div>';
 			$events = array(); // 'method'=parameter action of url, 'url'=url to call that return new list of contacts
-			$events[] = array('method' => 'getContacts', 'url' => dol_buildpath('/core/ajax/contacts.php?showempty=1', 1), 'htmlname' => 'contactid', 'params' => array('add-customer-contact' => 'disabled'));
+			$events[] = array('method' => 'getContacts', 'url' => dol_buildpath('/core/ajax/contacts.php?showempty=1&token='.currentToken(), 1), 'htmlname' => 'contactid', 'params' => array('add-customer-contact' => 'disabled'));
 			// TODO Refresh also list of project if conf PROJECT_ALLOW_TO_LINK_FROM_OTHER_COMPANY not defined with list linked to socid ?
 			// FIXME If we change company, we may get a project that does not match
 			print img_picto('', 'company', 'class="pictofixedwidth"').$form->select_company($object->socid, 'socid', '', 'SelectThirdParty', 1, 0, $events, 0, 'minwidth300');

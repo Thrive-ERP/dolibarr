@@ -3,6 +3,7 @@
  * Copyright (C) 2015-2016  Laurent Destailleur     <eldy@users.sourceforge.net>
  * Copyright (C) 2015       Jean-François Ferry     <jfefe@aternatik.fr>
  * Copyright (C) 2021       Gauthier VERDOL         <gauthier.verdol@atm-consulting.fr>
+ * Copyright (C) 2024 	    Nick Fragoulis
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,7 +68,7 @@ if (!$sortorder) {
 }
 
 // Initialize technical objects
-$object = new PaymentSalary($db);
+$object = new Salary($db);
 $extrafields = new ExtraFields($db);
 $diroutputmassaction = $conf->user->dir_output.'/temp/massgeneration/'.$user->id;
 $hookmanager->initHooks(array('salarieslist')); // Note that conf->hooks_modules contains array
@@ -144,6 +145,8 @@ $permissiontoread = $user->hasRight('salaries', 'read');
 $permissiontoadd = $user->hasRight('salaries', 'write');
 $permissiontodelete = $user->hasRight('salaries', 'delete');
 
+$error = 0;
+
 // Security check
 $socid = GETPOSTINT("socid");
 if ($user->socid) {
@@ -197,10 +200,10 @@ if ($massaction == 'withdrawrequest') {
 
 				if ($objecttmp->status == Salary::STATUS_PAID || $objecttmp->resteapayer == 0) {
 					$error++;
-					setEventMessages($objecttmp->ref.' '.$langs->trans("AlreadyPaid"), $objecttmp->errors, 'errors');
+					setEventMessages($langs->trans("Salary").' '.$objecttmp->ref.' : '.$langs->trans("AlreadyPaid"), $objecttmp->errors, 'errors');
 				} elseif ($resteapayer < 0) {
 					$error++;
-					setEventMessages($objecttmp->ref.' '.$langs->trans("AmountMustBePositive"), $objecttmp->errors, 'errors');
+					setEventMessages($langs->trans("Salary").' '.$objecttmp->ref.' : '.$langs->trans("AmountMustBePositive"), $objecttmp->errors, 'errors');
 				}
 
 				$rsql = "SELECT pfd.rowid, pfd.traite, pfd.date_demande as date_demande";
@@ -220,18 +223,20 @@ if ($massaction == 'withdrawrequest') {
 				}
 
 				if ($numprlv > 0) {
+					//$error++;		// Not an error, a simple warning we can ignore
+					setEventMessages($langs->trans("Salary").' '.$objecttmp->ref.' : '.$langs->trans("RequestAlreadyDone"), $objecttmp->errors, 'warnings');
+				} elseif (!empty($objecttmp->type_payment_code) && $objecttmp->type_payment_code != 'VIR') {
+					$langs->load("errors");
 					$error++;
-					setEventMessages($objecttmp->ref.' '.$langs->trans("RequestAlreadyDone"), $objecttmp->errors, 'warnings');
-				} elseif (!empty($objecttmp->type_payment) && $objecttmp->type_payment != '2') {
-					$error++;
-					setEventMessages($objecttmp->ref.' '.$langs->trans("BadPaymentMethod"), $objecttmp->errors, 'errors');
+					setEventMessages($langs->trans("Salary").' '.$objecttmp->ref.' : '.$langs->trans("ErrorThisPaymentModeIsNotCreditTransfer"), $objecttmp->errors, 'errors');
 				} else {
 					$listofSalries[] = $objecttmp;
 				}
 			}
 		}
 
-		if (!empty($listofSalries)) {
+		// Now process all record not in error
+		if (!$error && !empty($listofSalries)) {
 			$nbwithdrawrequestok = 0;
 			foreach ($listofSalries as $salary) {
 				$db->begin();
@@ -335,6 +340,9 @@ $sql = preg_replace('/,\s*$/', '', $sql);
 $sqlfields = $sql; // $sql fields to remove for count total
 
 $sql .= " FROM ".MAIN_DB_PREFIX."salary as s";
+if (!empty($extrafields->attributes[$object->table_element]['label']) && is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label'])) {
+	$sql .= " LEFT JOIN ".MAIN_DB_PREFIX.$object->table_element."_extrafields as ef on (s.rowid = ef.fk_object)";
+}
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."payment_salary as ps ON (ps.fk_salary = s.rowid) ";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."c_paiement as pst ON (s.fk_typepayment = pst.id) ";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."bank_account ba ON (ba.rowid = s.fk_account), ";
@@ -382,6 +390,8 @@ if ($search_status != '' && $search_status >= 0) {
 if ($search_type_id) {
 	$sql .= " AND s.fk_typepayment=".((int) $search_type_id);
 }
+// Add where from extra fields
+include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_search_sql.tpl.php';
 $sql .= " GROUP BY u.rowid, u.lastname, u.firstname, u.login, u.email, u.admin, u.photo, u.salary, u.fk_soc, u.statut,";
 $sql .= " s.rowid, s.fk_account, s.paye, s.fk_user, s.amount, s.salary, s.label, s.datesp, s.dateep, s.fk_typepayment, s.fk_bank,";
 $sql .= " ba.rowid, ba.ref, ba.number, ba.account_number, ba.fk_accountancy_journal, ba.label, ba.iban_prefix, ba.bic, ba.currency_code, ba.clos,";
@@ -427,7 +437,7 @@ $num = $db->num_rows($resql);
 if ($num == 1 && getDolGlobalString('MAIN_SEARCH_DIRECT_OPEN_IF_ONLY_ONE') && $search_all && !$page) {
 	$obj = $db->fetch_object($resql);
 	$id = $obj->rowid;
-	header("Location: ".dol_buildpath('/mymodule/myobject_card.php', 1).'?id='.$id);
+	header("Location: ".DOL_URL_ROOT.'/salaries/card.php?id='.$id);
 	exit;
 }
 
@@ -498,7 +508,7 @@ $arrayofmassactions = array(
 if (!empty($permissiontodelete)) {
 	$arrayofmassactions['predelete'] = img_picto('', 'delete', 'class="pictofixedwidth"').$langs->trans("Delete");
 }
-if (isModEnabled('prelevement') && $user->hasRight('prelevement', 'bons', 'creer')) {
+if (isModEnabled('paymentbybanktransfer') && $user->hasRight('paymentbybanktransfer', 'create')) {
 	$langs->load("withdrawals");
 	$arrayofmassactions['withdrawrequest'] = img_picto('', 'payment', 'class="pictofixedwidth"').$langs->trans("MakeBankTransferOrder");
 }
@@ -555,9 +565,6 @@ if (empty($reshook)) {
 if (!empty($moreforfilter)) {
 	print '<div class="liste_titre liste_titre_bydiv centpercent">';
 	print $moreforfilter;
-	$parameters = array();
-	$reshook = $hookmanager->executeHooks('printFieldPreListTitle', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
-	print $hookmanager->resPrint;
 	print '</div>';
 }
 
@@ -623,6 +630,9 @@ if (isModEnabled("bank")) {
 	print '</td>';
 }
 
+// Extra fields
+include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_search_input.tpl.php';
+
 // Amount
 print '<td class="liste_titre right"><input name="search_amount" class="flat" type="text" size="8" value="'.$db->escape($search_amount).'"></td>';
 
@@ -632,9 +642,6 @@ $liststatus = array('0' => $langs->trans("Unpaid"), '1' => $langs->trans("Paid")
 // @phan-suppress-next-line PhanPluginSuspiciousParamOrder
 print $form->selectarray('search_status', $liststatus, $search_status, 1, 0, 0, '', 0, 0, 0, '', 'search_status width100 onrightofpage');
 print '</td>';
-
-// Extra fields
-include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_search_input.tpl.php';
 
 // Fields from hook
 $parameters = array('arrayfields' => $arrayfields);
@@ -676,12 +683,15 @@ if (isModEnabled("bank")) {
 	print_liste_field_titre("DefaultBankAccount", $_SERVER["PHP_SELF"], "ba.label", "", $param, "", $sortfield, $sortorder);
 	$totalarray['nbfield']++;
 }
-print_liste_field_titre("Amount", $_SERVER["PHP_SELF"], "s.amount", "", $param, '', $sortfield, $sortorder, 'right ');
+
+// Extra fields
+include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_search_title.tpl.php';
+
+print_liste_field_titre("Amount", $_SERVER["PHP_SELF"], "s.amount", "", $param, 'class="right"', $sortfield, $sortorder);
 $totalarray['nbfield']++;
 print_liste_field_titre('Status', $_SERVER["PHP_SELF"], "s.paye", '', $param, '', $sortfield, $sortorder, 'center ');
 $totalarray['nbfield']++;
-// Extra fields
-include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_search_title.tpl.php';
+
 // Hook fields
 $parameters = array('arrayfields' => $arrayfields, 'param' => $param, 'sortfield' => $sortfield, 'sortorder' => $sortorder, 'totalarray' => &$totalarray);
 $reshook = $hookmanager->executeHooks('printFieldListTitle', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
@@ -859,6 +869,9 @@ while ($i < $imaxinloop) {
 
 		// if (!$i) $totalarray['pos'][$totalarray['nbfield']] = 'totalttcfield';
 
+		// Extra fields
+		include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_print_fields.tpl.php';
+
 		// Amount
 		print '<td class="nowraponall right"><span class="amount">'.price($obj->amount).'</span></td>';
 		if (!$i) {
@@ -875,8 +888,6 @@ while ($i < $imaxinloop) {
 			$totalarray['nbfield']++;
 		}
 
-		// Extra fields
-		include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_print_fields.tpl.php';
 		// Fields from hook
 		$parameters = array('arrayfields' => $arrayfields, 'object' => $object, 'obj' => $obj, 'i' => $i, 'totalarray' => &$totalarray);
 		$reshook = $hookmanager->executeHooks('printFieldListValue', $parameters, $object, $action); // Note that $action and $object may have been modified by hook

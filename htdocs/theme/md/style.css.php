@@ -552,7 +552,7 @@ input, input.flat, textarea, textarea.flat, form.flat select, select, select.fla
 }
 
 input {
-	line-height: 17px;
+	line-height: 1.3em;
 	padding: 5px;
 	padding-left: 5px;
 }
@@ -762,14 +762,18 @@ span.amount {
 td.actionbuttons a {
 	padding-left: 6px;
 }
-select.flat, form.flat select, .pageplusone, .divadvancedsearchfieldcompinput, {
+select.flat, form.flat select, .pageplusone {
 	font-weight: normal;
 	font-size: unset;
+}
+select.flat, form.flat select, .divadvancedsearchfieldcompinput {
 	height: 2em;
 }
-input.pageplusone, .divadvancedsearchfieldcompinput, {
+input.pageplusone, .divadvancedsearchfieldcompinput {
 	padding-bottom: 4px;
 	padding-top: 4px;
+	margin-right: 4px;
+	margin-left: 3px;
 }
 
 .saturatemedium {
@@ -802,6 +806,10 @@ input.pageplusone, .divadvancedsearchfieldcompinput, {
 }
 .colorblack {
 	color: var(--colorblack);
+}
+.colorblack.totalnboflines {
+	font-size: 95%;
+	opacity: 0.5;
 }
 .fontsizeunset {
 	font-size: unset !important;
@@ -1165,16 +1173,16 @@ td.wordbreak img, td.wordbreakimp img {
 	padding: 0;
 }
 .nopaddingleft {
-	padding-left: 0;
+	padding-<?php print $left; ?>: 0;
 }
 .nopaddingright {
-	padding-right: 0;
+	padding-<?php print $right; ?>: 0;
 }
 .nopaddingleftimp {
-	padding-left: 0 !important;
+	padding-<?php print $left; ?>: 0 !important;
 }
 .nopaddingrightimp {
-	padding-right: 0 !important;
+	padding-<?php print $right; ?>: 0 !important;
 }
 .paddingleft {
 	padding-<?php print $left; ?>: 4px;
@@ -1256,8 +1264,14 @@ td.wordbreak img, td.wordbreakimp img {
 .text-warning{
 	color : <?php print $textWarning; ?>
 }
+/* CSS used for extrafield text */
+.shortmessagecut {
+	max-height: <?php print getDolGlobalInt('MAIN_CSS_SHORTMESSSAGECUT', 125); ?>px;
+	max-width: 100%;
+	overflow-y: auto;
+}
 .longmessagecut {
-	max-height: 250px;
+	max-height: <?php print getDolGlobalInt('MAIN_CSS_LONGMESSSAGECUT', 250); ?>px;
 	max-width: 100%;
 	overflow-y: auto;
 }
@@ -1592,9 +1606,9 @@ input > ul.attendees {
 	vertical-align: middle;
 }
 select.flat.selectlimit {
-	max-width: 62px;
+	max-width: 75px;
 }
-.selectlimit, .marginrightonly {
+.marginrightonly {
 	margin-<?php echo $right; ?>: 10px !important;
 }
 .marginleftonly {
@@ -1833,6 +1847,11 @@ select.flat.selectlimit {
 .fa-15 {
 	font-size: 1.5em;
 }
+
+.fa-map-marked-alt:before {
+	font-size: 0.85em;
+}
+
 .text-security {
 	-webkit-text-security: disc;
 }
@@ -1844,6 +1863,7 @@ select.flat.selectlimit {
 	overflow-y: hidden;
 	-ms-overflow-style: -ms-autohiding-scrollbar;
 }*/
+
 /* Style used for most tables */
 div.fiche>div.tabBar>form>div.div-table-responsive {
 	min-height: 392px;
@@ -1855,13 +1875,20 @@ div.fiche>div.tabBar>form>div.div-table-responsive {
 .div-table-responsive {
 	line-height: var(--heightrow);
 }
+
 /* Style used for full page tables with field selector and no content after table (priority before previous for such tables) */
-div.fiche>form>div.div-table-responsive, div.fiche>form>div.div-table-responsive-no-min {
-	overflow-x: auto;
-}
 div.fiche>form>div.div-table-responsive {
 	min-height: 392px;
 }
+div.fiche>form>div.div-table-responsive, div.fiche>form>div.div-table-responsive-no-min {
+	overflow-x: auto;
+}
+
+/* Style used for table in public ticket */
+div.ticketpublicarealist>form>div.div-table-responsive {
+	min-height: 392px;
+}
+
 
 .display-flex {
 	display: flex;
@@ -1947,7 +1974,7 @@ tr.nobottom td {
 .minwidth75  { min-width: 75px; }
 .nominwidth { min-width: fit-content !important; }
 /* rule for not too small screen only */
-@media only screen and (min-width: <?php echo !getDolGlobalString('THEME_ELDY_WITDHOFFSET_FOR_REDUC3') ? round($nbtopmenuentries * 47, 0) + 130 : $conf->global->THEME_ELDY_WITDHOFFSET_FOR_REDUC3; ?>px)
+@media only screen and (min-width: <?php echo getDolGlobalString('THEME_ELDY_WITDHOFFSET_FOR_REDUC3', round($nbtopmenuentries * 47, 0) + 130); ?>px)
 {
 	.width20  { width: 20px; }
 	.width25  { width: 25px; }
@@ -2091,7 +2118,7 @@ select.widthcentpercentminusxx, span.widthcentpercentminusxx:not(.select2-select
 	}
 
 	div.divphotoref {
-		padding-right: 10px !important;
+		padding-<?php echo $right; ?>: 10px !important;
 	}
 
 	table.liste tr.trkanban td {
@@ -2261,19 +2288,16 @@ select.widthcentpercentminusxx, span.widthcentpercentminusxx:not(.select2-select
 	}
 
 	div.statusref {
-		padding-right: 10px;
+		padding-<?php echo $right; ?>: 10px;
 		max-width: 55%;
 	   }
-	div.statusref img {
-		padding-right: 3px !important;
-	   }
-	div.statusrefbis {
-		padding-right: 3px !important;
-	   }
+	div.statusref img, div.statusrefbis {
+		padding-<?php echo $right; ?>: 3px !important;
+	}
 
-	   input.buttonpayment {
+	input.buttonpayment {
 		min-width: 300px;
-	   }
+	}
 }
 
 /* Force values for small screen 320 */
@@ -2363,7 +2387,7 @@ td.showDragHandle {
 	float: left;
 }
 .classforhorizontalscrolloftabs #id-right {
-	width:calc(100% - 210px);
+	width:calc(100% - 252px);
 	display: inline-block;
 }
 
@@ -2769,8 +2793,8 @@ div.paginationref {
 	padding-bottom: 10px;
 }
 div.statusref {
-	float: right;
-	padding-left: 12px;
+	float: <?php echo $right; ?>;
+	padding-<?php echo $left; ?>: 12px;
 	margin-top: 8px;
 	margin-bottom: 10px;
 	clear: both;
@@ -2783,8 +2807,8 @@ div.statusref img {
 }
 div.statusrefbis {
 	padding-left: 8px;
-	   padding-right: 9px;
-	   vertical-align: text-bottom;
+	padding-right: 9px;
+	vertical-align: text-bottom;
 }
 img.photoref, div.photoref {
 	border: 1px solid #CCC;
@@ -3406,7 +3430,7 @@ div.login_block table {
 div.login {
 	white-space:nowrap;
 	font-weight: bold;
-	float: right;
+	float: <?php echo $right; ?>;
 }
 div.login a {
 	color: var(--colortextvmenu);
@@ -3429,8 +3453,8 @@ div.login_block_other { padding-top: 15px; }
 	vertical-align: middle;
 	clear: <?php echo $disableimages ? 'none' : 'both'; ?>;
 	padding-top: 0;
-	text-align: right;
-	margin-right: 8px;
+	text-align: <?php echo $right; ?>;
+	margin-<?php echo $right; ?>: 8px;
 	max-width: 200px;
 }
 
@@ -3439,7 +3463,7 @@ div.login_block_other { padding-top: 15px; }
 	line-height: 25px;
 }
 .login_block_elem {
-	float: right;
+	float: <?php echo $right; ?>;
 	vertical-align: middle;
 	padding: 0px 3px 0px 3px !important;
 	height: 18px;
@@ -3578,7 +3602,11 @@ a.vmenu:link, a.vmenu:visited {
 	color: var(--colortextbackvmenu);
 }
 
-a.vsmenu:link, a.vsmenu:visited, a.vsmenu:hover, a.vsmenu:active, span.vsmenu { font-size:<?php print is_numeric($fontsize) ? $fontsize.'px' : $fontsize ?>; font-family: <?php print $fontlist ?>; text-align: <?php print $left; ?>; font-weight: normal; color: #202020; margin: 1px 1px 1px 8px; }
+a.vsmenu:link, a.vsmenu:visited, a.vsmenu:hover, a.vsmenu:active, span.vmenu, span.vsmenu {
+	font-size:<?php print is_numeric($fontsize) ? $fontsize.'px' : $fontsize ?>; font-family: <?php print $fontlist ?>; text-align: <?php print $left; ?>; font-weight: normal;
+	color: var(--colortextbackvmenu);
+	margin: 1px 1px 1px 8px;
+}
 span.vsmenudisabled:not(.spanlilevel0), font.vsmenudisabled:not(.spanlilevel0) {
 	font-size:<?php print is_numeric($fontsize) ? $fontsize.'px' : $fontsize ?>;
 }
@@ -4362,7 +4390,7 @@ div.refaddress div.address {
 }
 
 div.pagination {
-	float: right;
+	float:<?php echo $right; ?>
 }
 div.pagination a {
 	font-weight: normal;
@@ -5179,8 +5207,8 @@ label.radioprivate {
 /*	margin-bottom: 2px;
 	margin-top: 2px; */
 }
-div.divphotoref > img.photowithmargin, div.divphotoref > a > .photowithmargin {		/* Margin right for photo not inside a div.photoref frame only */
-	margin-right: 15px;
+div.divphotoref > div > .photowithmargin, div.divphotoref > img.photowithmargin, div.divphotoref > a > .photowithmargin {		/* Margin right for photo not inside a div.photoref frame only */
+	margin-<?php echo $right; ?>: 15px;
 }
 .photowithborder {
 	border: 1px solid #f0f0f0;
@@ -5926,6 +5954,10 @@ div.jPicker table.jPicker {
 	padding-right: 20px;
 	padding-left: 20px;
 }
+table.jPicker tr:first-of-type td {
+	height: 2px !important;
+	line-height: 2px;
+}
 .jPicker .Move {
 	background: unset !important;
 	border: unset !important;
@@ -5952,6 +5984,12 @@ table.jPicker {
 }
 .jPicker td.Text {
 	white-space: nowrap;
+}
+.jPicker td.Text input {
+	height: 1em !important;
+}
+.jPicker .Preview div {
+	height: 36px !important;
 }
 
 A.color, A.color:active, A.color:visited {
@@ -6412,8 +6450,8 @@ ul.ecmjqft a:hover {
 div.ecmjqft {
 	vertical-align: middle;
 	display: inline-block !important;
-	text-align: right;
-	float: right;
+	text-align: <?php echo $right; ?>;
+	float: <?php echo $right; ?>;
 	right:4px;
 	clear: both;
 }
@@ -6424,7 +6462,7 @@ div#ecm-layout-west {
 div#ecm-layout-center {
 	width: calc(100% - 405px);
 	vertical-align: top;
-	float: right;
+	float: <?php echo $right; ?>;
 }
 
 .ecmjqft LI.directory { font-weight:normal; background: url(<?php echo dol_buildpath($path.'/theme/common/treemenu/folder2.png', 1); ?>) left top no-repeat; }
@@ -6594,7 +6632,8 @@ input.select2-input {
 }
 
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
-	border: 1px solid #e4e4e4;
+	/* border: 1px solid #e4e4e4; */
+	border: none;
 }
 
 .blockvmenusearch .select2-container--default .select2-selection--single,
@@ -6672,6 +6711,13 @@ input.select2-input {
 	border-left: none;
 	border-right: none;
 	border-radius: 0 !important;
+	line-height: normal;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__rendered {
+	line-height: 1.4em;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+	margin-top: 4px !important;
 }
 .select2-selection--multiple input.select2-search__field {
 	border-bottom: none !important;
@@ -8058,7 +8104,7 @@ table.jPicker {
 
 /* nboftopmenuentries = <?php echo $nbtopmenuentries ?>, fontsize=<?php echo is_numeric($fontsize) ? $fontsize.'px' : $fontsize ?> */
 /* rule to reduce top menu - 1st reduction: Reduce width of top menu icons */
-@media only screen and (max-width: <?php echo !getDolGlobalString('THEME_ELDY_WITDHOFFSET_FOR_REDUC1') ? round($nbtopmenuentries * 90, 0) + 340 : $conf->global->THEME_ELDY_WITDHOFFSET_FOR_REDUC1; ?>px)	/* reduction 1 */
+@media only screen and (max-width: <?php echo getDolGlobalString('THEME_ELDY_WITDHOFFSET_FOR_REDUC1', round($nbtopmenuentries * 90, 0) + 340); ?>px)	/* reduction 1 */
 {
 	div.tmenucenter {
 		max-width: 56px;	/* size of viewport */
@@ -8087,7 +8133,7 @@ table.jPicker {
 	}
 }
 /* rule to reduce top menu - 2nd reduction: Reduce width of top menu icons again */
-@media only screen and (max-width: <?php echo !getDolGlobalString('THEME_ELDY_WITDHOFFSET_FOR_REDUC2') ? round($nbtopmenuentries * 69, 0) + 130 : $conf->global->THEME_ELDY_WITDHOFFSET_FOR_REDUC2; ?>px)	/* reduction 2 */
+@media only screen and (max-width: <?php echo getDolGlobalString('THEME_ELDY_WITDHOFFSET_FOR_REDUC2', round($nbtopmenuentries * 69, 0) + 130); ?>px)	/* reduction 2 */
 {
 	li.tmenucompanylogo {
 		display: none;
@@ -8161,7 +8207,7 @@ table.jPicker {
 		min-width: 0 !important;
 	}
 	div.divphotoref {
-		padding-right: 5px;
+		padding-<?php echo $right; ?>: 5px;
 	}
 	img.photoref, div.photoref {
 		border: 1px solid rgba(0, 0, 0, 0.2);

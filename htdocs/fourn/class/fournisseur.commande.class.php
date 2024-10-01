@@ -607,7 +607,7 @@ class CommandeFournisseur extends CommonOrder
 		$sql = "SELECT l.rowid, l.fk_commande, l.ref as ref_supplier, l.fk_product, l.product_type, l.label, l.description, l.qty,";
 		$sql .= " l.vat_src_code, l.tva_tx, l.remise_percent, l.subprice,";
 		$sql .= " l.localtax1_tx, l. localtax2_tx, l.localtax1_type, l. localtax2_type, l.total_localtax1, l.total_localtax2,";
-		$sql .= " l.total_ht, l.total_tva, l.total_ttc, l.special_code, l.fk_parent_line, l.rang,";
+		$sql .= " l.total_ht, l.total_tva, l.total_ttc, l.info_bits, l.special_code, l.fk_parent_line, l.rang,";
 		$sql .= " p.rowid as product_id, p.ref as product_ref, p.label as product_label, p.description as product_desc, p.tobatch as product_tobatch, p.barcode as product_barcode,";
 		$sql .= " l.fk_unit,";
 		$sql .= " l.date_start, l.date_end,";
@@ -708,6 +708,7 @@ class CommandeFournisseur extends CommonOrder
 				$line->multicurrency_total_tva = $objp->multicurrency_total_tva;
 				$line->multicurrency_total_ttc = $objp->multicurrency_total_ttc;
 
+				$line->info_bits      	   = $objp->info_bits;
 				$line->special_code        = $objp->special_code;
 				$line->fk_parent_line      = $objp->fk_parent_line;
 
@@ -3374,16 +3375,17 @@ class CommandeFournisseur extends CommonOrder
 			return '';
 		}
 
-		$obj = new ProductFournisseur($this->db);
+		$tmpproductfourn = new ProductFournisseur($this->db);
 
 		$nb = 0;
 		foreach ($this->lines as $line) {
 			if ($line->fk_product > 0) {
-				$idp = $obj->find_min_price_product_fournisseur($line->fk_product, $line->qty);
-				if ($idp) {
-					$obj->fetch($idp);
-					if ($obj->delivery_time_days > $nb) {
-						$nb = $obj->delivery_time_days;
+				// Load delivery_time_days, return id into product_fournisseur_price
+				$idp = $tmpproductfourn->find_min_price_product_fournisseur($line->fk_product, $line->qty, $this->thirdparty->id);
+				if ($idp > 0) {
+					//$tmpproductfourn->fetch_product_fournisseur_price($idp);
+					if ($tmpproductfourn->delivery_time_days > $nb) {
+						$nb = $tmpproductfourn->delivery_time_days;
 					}
 				}
 			}
@@ -3392,7 +3394,7 @@ class CommandeFournisseur extends CommonOrder
 		if ($nb === 0) {
 			return '';
 		} else {
-			return $nb.' '.$langs->trans('Days');
+			return $nb.' '.$langs->trans('days');
 		}
 	}
 
@@ -4185,7 +4187,7 @@ class CommandeFournisseurLigne extends CommonOrderLine
 			return -1;
 		}
 
-		$sql1 = 'UPDATE '.$this->db->prefix()."commandedet SET fk_commandefourndet = NULL WHERE rowid=".((int) $this->id);
+		$sql1 = 'UPDATE '.$this->db->prefix()."commandedet SET fk_commandefourndet = NULL WHERE fk_commandefourndet=".((int) $this->id);
 		$resql = $this->db->query($sql1);
 		if (!$resql) {
 			$this->db->rollback();

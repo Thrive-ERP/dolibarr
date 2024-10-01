@@ -233,7 +233,7 @@ class Ticket extends CommonObject
 	public $email_msgid;
 
 	/**
-	 * @var string 	Email Date
+	 * @var null|int|'' 	Email Date
 	 */
 	public $email_date;
 
@@ -1900,7 +1900,7 @@ class Ticket extends CommonObject
 					if (dol_mkdir($destdir) >= 0) {
 						require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
 						dol_move($filespath, $destfile);
-						if ($actioncomm->code == "TICKET_MSG") {
+						if (in_array($actioncomm->code,  array('TICKET_MSG', 'TICKET_MSG_SENTBYMAIL'))) {
 							$ecmfile = new EcmFiles($this->db);
 							$destdir = preg_replace('/^'.preg_quote(DOL_DATA_ROOT, '/').'/', '', $destdir);
 							$destdir = preg_replace('/[\\/]$/', '', $destdir);
@@ -1956,7 +1956,7 @@ class Ticket extends CommonObject
 				$obj = $this->db->fetch_object($resql);
 				$this->cache_msgs_ticket[$i]['id'] = $obj->rowid;
 				$this->cache_msgs_ticket[$i]['fk_user_author'] = $obj->fk_user_author;
-				if ($obj->code == 'TICKET_MSG' && empty($obj->fk_user_author)) {
+				if (in_array($obj->code, array('TICKET_MSG', 'AC_TICKET_CREATE')) && empty($obj->fk_user_author)) {
 					$this->cache_msgs_ticket[$i]['fk_contact_author'] = $obj->email_from;
 				}
 				$this->cache_msgs_ticket[$i]['datec'] = $this->db->jdate($obj->datec);

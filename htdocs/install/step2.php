@@ -93,11 +93,12 @@ dolibarr_install_syslog("--- step2: entering step2.php page");
 
 '@phan-var-force string $dolibarr_main_db_prefix';  // From configuraiotn file or install/inc.php
 
+
 /*
  *	View
  */
 
-pHeader($langs->trans("CreateDatabaseObjects"), "step4");
+pHeader($langs->trans("DolibarrSetup").' - '.$langs->trans("CreateDatabaseObjects"), "step4");
 
 // Test if we can run a first install process
 if (!is_writable($conffile)) {
@@ -535,6 +536,9 @@ if ($action == "set") {
 					if ($dolibarr_main_db_prefix != 'llx_') {
 						$buffer = preg_replace('/llx_/i', $dolibarr_main_db_prefix, $buffer);
 					}
+
+					// Replace __ENTITY__ tag with 1 (master entity), this is only for dictionaries.
+					$buffer = preg_replace('/__ENTITY__/i', '1', $buffer);
 
 					//dolibarr_install_syslog("step2: request: " . $buffer);
 					$resql = $db->query($buffer, 1);

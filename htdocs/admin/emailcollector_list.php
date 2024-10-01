@@ -401,7 +401,7 @@ $moreforfilter.= $langs->trans('MyFilter') . ': <input type="text" name="search_
 $moreforfilter.= '</div>';*/
 
 $parameters = array();
-$reshook = $hookmanager->executeHooks('printFieldPreListTitle', $parameters, $object); // Note that $action and $object may have been modified by hook
+$reshook = $hookmanager->executeHooks('printFieldPreListTitle', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
 if (empty($reshook)) {
 	$moreforfilter .= $hookmanager->resPrint;
 } else {
@@ -722,7 +722,7 @@ if ($conf->use_javascript_ajax) {
 	print ajax_constantonoff('MAIN_EMAILCOLLECTOR_MAIL_WITHOUT_HEADER');
 } else {
 	$arrval = array('0' => $langs->trans("No"), '1' => $langs->trans("Yes"));
-	print $form->selectarray("MAIN_EMAILCOLLECTOR_MAIL_WITHOUT_HEADER", $arrval, $conf->global->TICKET_AUTO_READ_WHEN_CREATED_FROM_BACKEND);
+	print $form->selectarray("MAIN_EMAILCOLLECTOR_MAIL_WITHOUT_HEADER", $arrval, getDolGlobalString('TICKET_AUTO_READ_WHEN_CREATED_FROM_BACKEND'));
 }
 print '</td>';
 print '</tr>';

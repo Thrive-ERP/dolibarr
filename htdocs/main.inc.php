@@ -211,6 +211,7 @@ function testSqlAndScriptInject($val, $type)
 	}
 	$inj += preg_match('/base\s+href/si', $val);
 	$inj += preg_match('/=data:/si', $val);
+
 	// List of dom events is on https://www.w3schools.com/jsref/dom_obj_event.asp and https://developer.mozilla.org/en-US/docs/Web/Events
 	$inj += preg_match('/on(mouse|drag|key|load|touch|pointer|select|transition)[a-z]*\s*=/i', $val); // onmousexxx can be set on img or any html tag like <img title='...' onmouseover=alert(1)>
 	$inj += preg_match('/on(abort|after|animation|auxclick|before|blur|cancel|canplay|canplaythrough|change|click|close|contextmenu|cuechange|copy|cut)[a-z]*\s*=/i', $val);
@@ -219,11 +220,12 @@ function testSqlAndScriptInject($val, $type)
 	$inj += preg_match('/on(paste|pause|play|playing|progress|ratechange|reset|resize|scroll|search|seeked|seeking|show|stalled|start|submit|suspend)[a-z]*\s*=/i', $val);
 	$inj += preg_match('/on(timeupdate|toggle|unload|volumechange|waiting|wheel)[a-z]*\s*=/i', $val);
 	// More not into the previous list
-
 	$inj += preg_match('/on(repeat|begin|finish|beforeinput)[a-z]*\s*=/i', $val);
 
-	// We refuse html into html because some hacks try to obfuscate evil strings by inserting HTML into HTML. Example: <img on<a>error=alert(1) to bypass test on onerror
-	$tmpval = preg_replace('/<[^<]+>/', '', $val);
+	// We refuse html into html because some hacks try to obfuscate evil strings by inserting HTML into HTML.
+	// Example: <img on<a>error=alert(1) or <img onerror<>=alert(1) to bypass test on onerror=
+	$tmpval = preg_replace('/<[^<]*>/', '', $val);
+
 	// List of dom events is on https://www.w3schools.com/jsref/dom_obj_event.asp and https://developer.mozilla.org/en-US/docs/Web/Events
 	$inj += preg_match('/on(mouse|drag|key|load|touch|pointer|select|transition)[a-z]*\s*=/i', $tmpval); // onmousexxx can be set on img or any html tag like <img title='...' onmouseover=alert(1)>
 	$inj += preg_match('/on(abort|after|animation|auxclick|before|blur|cancel|canplay|canplaythrough|change|click|close|contextmenu|cuechange|copy|cut)[a-z]*\s*=/i', $tmpval);
@@ -626,7 +628,7 @@ if ((!defined('NOCSRFCHECK') && empty($dolibarr_nocsrfcheck) && getDolGlobalInt(
 	$sensitiveget = false;
 	if ((GETPOSTISSET('massaction') || GETPOST('action', 'aZ09')) && getDolGlobalInt('MAIN_SECURITY_CSRF_WITH_TOKEN') >= 3) {
 		// All GET actions (except the listed exceptions that are usually post for pre-actions and not real action) and mass actions are processed as sensitive.
-		if (GETPOSTISSET('massaction') || !in_array(GETPOST('action', 'aZ09'), array('create', 'createsite', 'createcard', 'edit', 'editvalidator', 'file_manager', 'presend', 'presend_addmessage', 'preview', 'specimen'))) {	// We exclude some action that are not sensitive so legitimate
+		if (GETPOSTISSET('massaction') || !in_array(GETPOST('action', 'aZ09'), array('create', 'createsite', 'createcard', 'edit', 'editcontract', 'editvalidator', 'file_manager', 'presend', 'presend_addmessage', 'preview', 'reconcile', 'specimen'))) {	// We exclude some action that are not sensitive so legitimate
 			$sensitiveget = true;
 		}
 	} elseif (getDolGlobalInt('MAIN_SECURITY_CSRF_WITH_TOKEN') >= 2) {
@@ -1565,8 +1567,8 @@ if (!function_exists("llxHeader")) {
 	 * 		                            			Syntax is: For a wiki page: EN:EnglishPage|FR:FrenchPage|ES:SpanishPage|DE:GermanPage
 	 *                                  			For other external page: http://server/url
 	 * @param	string			$target				Target to use on links
-	 * @param 	int    			$disablejs			More content into html header
-	 * @param 	int    			$disablehead		More content into html header
+	 * @param 	int<0,1>		$disablejs			More content into html header
+	 * @param 	int<0,1>		$disablehead		More content into html header
 	 * @param 	array|string  	$arrayofjs			Array of complementary js files
 	 * @param 	array|string  	$arrayofcss			Array of complementary css files
 	 * @param	string			$morequerystring	Query string to add to the link "print" to get same parameters (use only if autodetect fails)
@@ -1615,7 +1617,7 @@ if (!function_exists("llxHeader")) {
 		}
 
 		if (getDolGlobalString('MAIN_OPTIMIZEFORCOLORBLIND')) {
-			$tmpcsstouse .= ' colorblind-'.strip_tags($conf->global->MAIN_OPTIMIZEFORCOLORBLIND);
+			$tmpcsstouse .= ' colorblind-'.strip_tags(getDolGlobalString('MAIN_OPTIMIZEFORCOLORBLIND'));
 		}
 
 		print '<body id="mainbody" class="'.$tmpcsstouse.'">'."\n";
@@ -1894,6 +1896,7 @@ function top_htmlhead($head, $title = '', $disablejs = 0, $disablehead = 0, $arr
 		}
 		// Refresh value of MAIN_IHM_PARAMS_REV before forging the parameter line.
 		if (GETPOST('dol_resetcache')) {
+			include_once DOL_DOCUMENT_ROOT.'/core/lib/admin.lib.php';
 			dolibarr_set_const($db, "MAIN_IHM_PARAMS_REV", getDolGlobalInt('MAIN_IHM_PARAMS_REV') + 1, 'chaine', 0, '', $conf->entity);
 		}
 
@@ -2502,23 +2505,29 @@ function top_menu_user($hideloginname = 0, $urllogout = '')
 	$dropdownBody .= '<div id="topmenulogincompanyinfo" >';
 
 	$dropdownBody .= '<br><b>'.$langs->trans("Company").'</b>: <span>'.dol_escape_htmltag($mysoc->name).'</span>';
-	if ($langs->transcountry("ProfId1", $mysoc->country_code) != '-') {
-		$dropdownBody .= '<br><b>'.$langs->transcountry("ProfId1", $mysoc->country_code).'</b>: <span>'.dol_print_profids(getDolGlobalString("MAIN_INFO_SIREN"), 1).'</span>';
-	}
-	if ($langs->transcountry("ProfId2", $mysoc->country_code) != '-') {
-		$dropdownBody .= '<br><b>'.$langs->transcountry("ProfId2", $mysoc->country_code).'</b>: <span>'.dol_print_profids(getDolGlobalString("MAIN_INFO_SIRET"), 2).'</span>';
-	}
-	if ($langs->transcountry("ProfId3", $mysoc->country_code) != '-') {
-		$dropdownBody .= '<br><b>'.$langs->transcountry("ProfId3", $mysoc->country_code).'</b>: <span>'.dol_print_profids(getDolGlobalString("MAIN_INFO_APE"), 3).'</span>';
-	}
-	if ($langs->transcountry("ProfId4", $mysoc->country_code) != '-') {
-		$dropdownBody .= '<br><b>'.$langs->transcountry("ProfId4", $mysoc->country_code).'</b>: <span>'.dol_print_profids(getDolGlobalString("MAIN_INFO_RCS"), 4).'</span>';
-	}
-	if ($langs->transcountry("ProfId5", $mysoc->country_code) != '-') {
-		$dropdownBody .= '<br><b>'.$langs->transcountry("ProfId5", $mysoc->country_code).'</b>: <span>'.dol_print_profids(getDolGlobalString("MAIN_INFO_PROFID5"), 5).'</span>';
-	}
-	if ($langs->transcountry("ProfId6", $mysoc->country_code) != '-') {
-		$dropdownBody .= '<br><b>'.$langs->transcountry("ProfId6", $mysoc->country_code).'</b>: <span>'.dol_print_profids(getDolGlobalString("MAIN_INFO_PROFID6"), 6).'</span>';
+	$idprofcursor = 0;
+	while ($idprofcursor < 10) {
+		$idprofcursor++;
+		$constkeyforprofid = 'MAIN_INFO_PROFID'.$idprofcursor;
+		if ($idprofcursor == 1) {
+			$constkeyforprofid = 'MAIN_INFO_SIREN';
+		}
+		if ($idprofcursor == 2) {
+			$constkeyforprofid = 'MAIN_INFO_SIRET';
+		}
+		if ($idprofcursor == 3) {
+			$constkeyforprofid = 'MAIN_INFO_APE';
+		}
+		if ($idprofcursor == 4) {
+			$constkeyforprofid = 'MAIN_INFO_RCS';
+		}
+		$showprofid = (($idprofcursor <= 6) && $langs->transcountry("ProfId".$idprofcursor, $mysoc->country_code) != '-');
+		if ($idprofcursor > 6 && getDolGlobalString($constkeyforprofid)) {
+			$showprofid = true;
+		}
+		if ($showprofid) {
+			$dropdownBody .= '<br><b>'.$langs->transcountry("ProfId".$idprofcursor, $mysoc->country_code).'</b>: <span>'.dol_print_profids(getDolGlobalString($constkeyforprofid), 1).'</span>';
+		}
 	}
 	$dropdownBody .= '<br><b>'.$langs->trans("VATIntraShort").'</b>: <span>'.dol_print_profids(getDolGlobalString("MAIN_INFO_TVAINTRA"), 'VAT').'</span>';
 	$dropdownBody .= '<br><b>'.$langs->trans("Country").'</b>: <span>'.($mysoc->country_code ? $langs->trans("Country".$mysoc->country_code) : '').'</span>';
@@ -2680,7 +2689,7 @@ function top_menu_user($hideloginname = 0, $urllogout = '')
 		$btnUser = '<!-- div for user link text browser -->
 	    <div id="topmenu-login-dropdown" class="userimg atoplogin dropdown user user-menu inline-block">
 	    	<a href="'.DOL_URL_ROOT.'/user/card.php?id='.$user->id.'" class="valignmiddle" alt="'.$langs->trans("MyUserCard").'">
-	    	'.$userImage.(empty($user->photo) ? '<span class="hidden-xs maxwidth200 atoploginusername hideonsmartphone paddingleft small">'.dol_trunc($user->firstname ? $user->firstname : $user->login, 10).'</span>' : '').'
+	    	'.$userImage.(empty($user->photo) ? '<span class="hidden-xs maxwidth200 atoploginusername hideonsmartphone paddingleft small valignmiddle">'.dol_trunc($user->firstname ? $user->firstname : $user->login, 10).'</span>' : '').'
 	    	</a>
 		</div>';
 	}
@@ -3090,7 +3099,7 @@ function top_menu_bookmark()
 }
 
 /**
- * Build the tooltip on top menu tsearch
+ * Build the tooltip on top menu search
  *
  * @return  string                  HTML content
  */
