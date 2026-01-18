@@ -1173,8 +1173,8 @@ function GETPOSTDATE($prefix, $hourTime = '', $gm = 'auto')
 	$m = array();
 	if ($hourTime === 'getpost') {
 		$hour   = GETPOSTINT($prefix . 'hour');
-		$minute = GETPOSTINT($prefix . 'minute');
-		$second = GETPOSTINT($prefix . 'second');
+		$minute = GETPOSTINT($prefix . 'min');
+		$second = GETPOSTINT($prefix . 'sec');
 	} elseif (preg_match('/^(\d\d):(\d\d):(\d\d)$/', $hourTime, $m)) {
 		$hour   = intval($m[1]);
 		$minute = intval($m[2]);
@@ -13475,7 +13475,7 @@ function getElementProperties($elementType)
 		$classname = 'CommandeFournisseurLigne';
 		$table_element = 'commande_fournisseurdet';
 		$parent_element = 'commande_fournisseur';
-	} elseif ($elementType == 'invoice_supplier') {
+	} elseif ($elementType == 'invoice_supplier' || $elementType == 'facture_fourn') {
 		$classpath = 'fourn/class';
 		$module = 'fournisseur';
 		$classfile = 'fournisseur.facture';
@@ -15079,12 +15079,12 @@ function show_actions_messaging($conf, $langs, $db, $filterobj, $objcon = null, 
 			if (isset($histo[$key]['socpeopleassigned']) && is_array($histo[$key]['socpeopleassigned']) && count($histo[$key]['socpeopleassigned']) > 0) {
 				$contactList = '';
 				foreach ($histo[$key]['socpeopleassigned'] as $cid => $Tab) {
-					if (empty($conf->cache['contact'][$histo[$key]['contact_id']])) {
+					if (empty($conf->cache['contact'][$cid])) {
 						$contact = new Contact($db);
 						$contact->fetch($cid);
-						$conf->cache['contact'][$histo[$key]['contact_id']] = $contact;
+						$conf->cache['contact'][$cid] = $contact;
 					} else {
-						$contact = $conf->cache['contact'][$histo[$key]['contact_id']];
+						$contact = $conf->cache['contact'][$cid];
 					}
 
 					if ($contact) {
@@ -15220,8 +15220,8 @@ function buildParamDate($prefix, $timestamp = null, $hourTime = '', $gm = 'auto'
 	if ($hourTime === 'getpost' || ($timestamp !== null && dol_print_date($timestamp, '%H:%M:%S') !== '00:00:00')) {
 		$TParam = array_merge($TParam, array(
 			$prefix . 'hour'   => intval(dol_print_date($timestamp, '%H')),
-			$prefix . 'minute' => intval(dol_print_date($timestamp, '%M')),
-			$prefix . 'second' => intval(dol_print_date($timestamp, '%S'))
+			$prefix . 'min' => intval(dol_print_date($timestamp, '%M')),
+			$prefix . 'sec' => intval(dol_print_date($timestamp, '%S'))
 		));
 	}
 
