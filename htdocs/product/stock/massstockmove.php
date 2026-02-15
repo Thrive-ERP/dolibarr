@@ -483,6 +483,12 @@ if ($action == 'importCSV' && $user->hasRight('stock', 'mouvement', 'creer')) {
 					$error++;
 					setEventMessages($langs->trans("ErrorFieldRequired", $langs->transnoentitiesnoconv("Qty")), null, 'errors');
 				}
+				//Begin Customisation: Accellier Ltd: validate that qty is a number
+				if (is_numeric($tmp_qty) === FALSE) {
+					$error++;
+					setEventMessages('Qty need to be numeric value only', null, 'errors');
+				}
+				//End Customisation
 
 				// Check a batch number is provided if product need it
 				if (!$error) {
