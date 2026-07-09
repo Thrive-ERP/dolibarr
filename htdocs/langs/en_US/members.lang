@@ -48,6 +48,7 @@ NewMember=New member
 MemberType=Member type
 MemberTypeId=Member type id
 MemberTypeLabel=Member type label
+MemberCardNatureLabel=Membership Type
 MembersTypes=Members types
 MemberStatusDraft=Draft (needs to be validated)
 MemberStatusDraftShort=Draft

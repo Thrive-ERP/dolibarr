@@ -541,7 +541,7 @@ if (empty($reshook)) {
 		// Check parameters
 		if (empty($morphy) || $morphy == "-1") {
 			$error++;
-			setEventMessages($langs->trans("ErrorFieldRequired", $langs->transnoentitiesnoconv("MemberNature")), null, 'errors');
+			setEventMessages($langs->trans("ErrorFieldRequired", $langs->transnoentitiesnoconv("MemberCardNatureLabel")), null, 'errors');
 		}
 		// Tests if the login already exists
 		if (!getDolGlobalString('ADHERENT_LOGIN_NOT_REQUIRED')) {
@@ -1061,7 +1061,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($action)) {
 		$morphys["mor"] = $langs->trans("Moral");
 		$checkednature = GETPOST("morphy", 'alpha');
 
-		print '<tr><td class="fieldrequired">'.$langs->trans("MemberNature")."</td><td>\n";
+		print '<tr><td class="fieldrequired">'.$langs->trans("MemberCardNatureLabel")."</td><td>\n";
 		print '<span id="spannature1" class="nonature-back spannature paddinglarge marginrightonly"><label for="phisicalinput" class="valignmiddle">'.$morphys["phy"].'<input id="phisicalinput" class="flat checkforselect marginleftonly valignmiddle" type="radio" name="morphy" value="phy"'.($checkednature == "phy" ? ' checked="checked"' : '').'></label></span>';
 		print '<span id="spannature2" class="nonature-back spannature paddinglarge marginrightonly"><label for="moralinput" class="valignmiddle">'.$morphys["mor"].'<input id="moralinput" class="flat checkforselect marginleftonly valignmiddle" type="radio" name="morphy" value="mor"'.($checkednature == "mor" ? ' checked="checked"' : '').'></label></span>';
 
@@ -1322,7 +1322,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($action)) {
 		$morphys["phy"] = $langs->trans("Physical");
 		$morphys["mor"] = $langs->trans("Moral");
 		$checkednature = (GETPOSTISSET("morphy") ? GETPOST("morphy", 'alpha') : $object->morphy);
-		print '<tr><td><span class="fieldrequired">'.$langs->trans("MemberNature").'</span></td><td>';
+		print '<tr><td><span class="fieldrequired">'.$langs->trans("MemberCardNatureLabel").'</span></td><td>';
 		print '<span id="spannature1" class="member-individual-back spannature paddinglarge marginrightonly"><label for="phisicalinput" class="valignmiddle">'.$morphys["phy"].'<input id="phisicalinput" class="flat checkforselect marginleftonly valignmiddle" type="radio" name="morphy" value="phy"'.($checkednature == "phy" ? ' checked="checked"' : '').'></label></span>';
 		print '<span id="spannature1" class="member-company-back spannature paddinglarge marginrightonly"><label for="moralinput" class="valignmiddle">'.$morphys["mor"].'<input id="moralinput" class="flat checkforselect marginleftonly valignmiddle" type="radio" name="morphy" value="mor"'.($checkednature == "mor" ? ' checked="checked"' : '').'></label></span>';
 		print "</td></tr>";
@@ -1815,7 +1815,7 @@ if (is_object($objcanvas) && $objcanvas->displayCanvasExists($action)) {
 		print '<td class="valeur">'.$adht->getNomUrl(1)."</td></tr>\n";
 
 		// Morphy
-		print '<tr><td>'.$langs->trans("MemberNature").'</td>';
+		print '<tr><td>'.$langs->trans("MemberCardNatureLabel").'</td>';
 		print '<td class="valeur" >'.$object->getmorphylib('', 1).'</td>';
 		print '</tr>';
 
