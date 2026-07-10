@@ -4,6 +4,7 @@ Warehouse=Warehouse
 Warehouses=Warehouses
 ParentWarehouse=Parent warehouse
 NewWarehouse=New warehouse / Stock Location
+LabelIsRequired=Label is required
 WarehouseEdit=Modify warehouse
 MenuNewWarehouse=New warehouse
 WarehouseSource=Source warehouse

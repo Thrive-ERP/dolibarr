@@ -329,7 +329,7 @@ if ($action == 'create') {
 	print '<table class="border centpercent">';
 
 	// Ref
-	print '<tr><td class="titlefieldcreate fieldrequired">'.$langs->trans("Ref").'</td><td><input class="width200" name="libelle" value=""></td></tr>';
+	print '<tr><td class="titlefieldcreate fieldrequired">'.$langs->trans("Ref").'</td><td><input class="width200" id="libelle" name="libelle" value=""><span id="libelle-error" class="error" style="display: none; margin-left: 10px;"></span></td></tr>';
 
 	print '<tr><td>'.$langs->trans("LocationSummary").'</td><td><input name="lieu" size="40" value="'.(!empty($object->lieu) ? $object->lieu : '').'"></td></tr>';
 
@@ -420,6 +420,24 @@ if ($action == 'create') {
 	print $form->buttonsSaveCancel("Create");
 
 	print '</form>';
+
+	// Client-side required validation for the Label field, scoped to the create form only.
+	// Server-side check in Entrepot::create() still rejects an empty label if JS is bypassed.
+	print '<script>
+	jQuery(document).ready(function() {
+		jQuery("form[action=\''.dol_escape_js($_SERVER["PHP_SELF"]).'\']").on("submit", function(e) {
+			var $libelle = jQuery("#libelle");
+			var $error = jQuery("#libelle-error");
+			if (jQuery.trim($libelle.val()) === "") {
+				e.preventDefault();
+				$error.text("'.dol_escape_js($langs->trans("LabelIsRequired")).'").show();
+				$libelle.trigger("focus");
+			} else {
+				$error.hide().text("");
+			}
+		});
+	});
+	</script>';
 } else {
 	$id = GETPOSTINT("id");
 	if ($id > 0 || $ref) {
