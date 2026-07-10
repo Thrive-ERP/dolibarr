@@ -37,6 +37,7 @@ IncludeEmptyDesiredStock=Include also negative stock with undefined desired stoc
 IncludeAlsoDraftOrders=Include also draft orders
 Location=Location
 LocationSummary=Short name of location
+LocationSummaryRequired=Location summary is required
 NumberOfDifferentProducts=Number of unique products
 NumberOfProducts=Total number of products
 LastMovement=Latest movement

@@ -1,0 +1,11 @@
+{
+  "name": "Warehouse create - Location summary required",
+  "description": "Submitting the New warehouse form with an empty Location summary field is blocked client-side and shows an inline 'Location summary is required' message without a page reload.",
+  "start_path": "/product/stock/card.php?action=create",
+  "steps": [
+    {"action": "fill", "selector": "input[name=\"libelle\"]", "text": "QA Test Warehouse"},
+    {"action": "click", "selector": "button[name=\"add\"], input[name=\"add\"]"},
+    {"action": "wait_for", "selector": "#lieu_error:not(:empty)", "timeout": 8000},
+    {"action": "screenshot", "name": "after-empty-lieu-submit", "caption": "Inline 'Location summary is required' error shown next to the field, no page reload"}
+  ]
+}

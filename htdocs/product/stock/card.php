@@ -163,7 +163,20 @@ if (empty($reshook)) {
 		$object->phone        = (string) GETPOST("phone", "alpha");
 		$object->fax          = (string) GETPOST("fax", "alpha");
 
-		if (!empty($object->label)) {
+		if (empty($object->label)) {
+			$error++;
+			setEventMessages($langs->trans("ErrorWarehouseRefRequired"), null, 'errors');
+			$action = "create"; // Force retour sur page creation
+		}
+
+		if (empty($object->lieu)) {
+			// Server-side fallback in case the JS validation on the create form is bypassed
+			$error++;
+			setEventMessages($langs->trans("LocationSummaryRequired"), null, 'errors');
+			$action = "create";
+		}
+
+		if (!$error) {
 			// Fill array 'array_options' with data from add form
 			$ret = $extrafields->setOptionalsFromPost(null, $object);
 			if ($ret < 0) {
@@ -191,9 +204,6 @@ if (empty($reshook)) {
 					setEventMessages($object->error, $object->errors, 'errors');
 				}
 			}
-		} else {
-			setEventMessages($langs->trans("ErrorWarehouseRefRequired"), null, 'errors');
-			$action = "create"; // Force retour sur page creation
 		}
 	}
 
@@ -319,7 +329,7 @@ if ($action == 'create') {
 
 	dol_set_focus('input[name="libelle"]');
 
-	print '<form action="'.$_SERVER["PHP_SELF"].'" method="post">'."\n";
+	print '<form action="'.$_SERVER["PHP_SELF"].'" method="post" id="formwarehousecreate" name="formwarehousecreate">'."\n";
 	print '<input type="hidden" name="token" value="'.newToken().'">';
 	print '<input type="hidden" name="action" value="add">';
 	print '<input type="hidden" name="backtopage" value="'.$backtopage.'">';
@@ -331,7 +341,7 @@ if ($action == 'create') {
 	// Ref
 	print '<tr><td class="titlefieldcreate fieldrequired">'.$langs->trans("Ref").'</td><td><input class="width200" name="libelle" value=""></td></tr>';
 
-	print '<tr><td>'.$langs->trans("LocationSummary").'</td><td><input name="lieu" size="40" value="'.(!empty($object->lieu) ? $object->lieu : '').'"></td></tr>';
+	print '<tr><td class="fieldrequired">'.$langs->trans("LocationSummary").'</td><td><input id="lieu" name="lieu" size="40" value="'.(!empty($object->lieu) ? $object->lieu : '').'"><span id="lieu_error" class="error" style="display:none"></span></td></tr>';
 
 	// Parent entrepot
 	print '<tr><td>'.$langs->trans("AddIn").'</td><td>';
@@ -420,6 +430,26 @@ if ($action == 'create') {
 	print $form->buttonsSaveCancel("Create");
 
 	print '</form>';
+
+	// Inline client-side validation for the required Location summary field (server side still rejects if bypassed, see action=='add')
+	print '<script type="text/javascript">';
+	print '$(document).ready(function () {
+		$("#formwarehousecreate").on("submit", function (e) {
+			var lieuVal = $.trim($("#lieu").val());
+			if (lieuVal === "") {
+				e.preventDefault();
+				$("#lieu_error").text("'.dol_escape_js($langs->transnoentities("LocationSummaryRequired")).'").show();
+			} else {
+				$("#lieu_error").hide();
+			}
+		});
+		$("#lieu").on("input", function () {
+			if ($.trim($(this).val()) !== "") {
+				$("#lieu_error").hide();
+			}
+		});
+	});';
+	print '</script>';
 } else {
 	$id = GETPOSTINT("id");
 	if ($id > 0 || $ref) {
