@@ -1,0 +1,10 @@
+{
+  "name": "Warehouse create - required Label client-side validation",
+  "description": "Submitting the New warehouse form with an empty Label shows an inline required-field error and does not reload the page.",
+  "start_path": "/product/stock/card.php?action=create",
+  "steps": [
+    { "action": "click", "selector": "#formwarehousecreate .button" },
+    { "action": "wait_for", "selector": "#libelle_error:visible", "timeout": 8000 },
+    { "action": "screenshot", "name": "after-empty-submit", "caption": "Inline 'Label is required' error shown next to the field, no page reload" }
+  ]
+}

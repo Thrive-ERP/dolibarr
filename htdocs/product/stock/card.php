@@ -319,7 +319,7 @@ if ($action == 'create') {
 
 	dol_set_focus('input[name="libelle"]');
 
-	print '<form action="'.$_SERVER["PHP_SELF"].'" method="post">'."\n";
+	print '<form action="'.$_SERVER["PHP_SELF"].'" method="post" id="formwarehousecreate" name="formwarehousecreate">'."\n";
 	print '<input type="hidden" name="token" value="'.newToken().'">';
 	print '<input type="hidden" name="action" value="add">';
 	print '<input type="hidden" name="backtopage" value="'.$backtopage.'">';
@@ -329,7 +329,7 @@ if ($action == 'create') {
 	print '<table class="border centpercent">';
 
 	// Ref
-	print '<tr><td class="titlefieldcreate fieldrequired">'.$langs->trans("Ref").'</td><td><input class="width200" name="libelle" value=""></td></tr>';
+	print '<tr><td class="titlefieldcreate fieldrequired">'.$langs->trans("Ref").'</td><td><input class="width200" id="libelle" name="libelle" value=""> <span id="libelle_error" class="error" style="display:none;"></span></td></tr>';
 
 	print '<tr><td>'.$langs->trans("LocationSummary").'</td><td><input name="lieu" size="40" value="'.(!empty($object->lieu) ? $object->lieu : '').'"></td></tr>';
 
@@ -420,6 +420,24 @@ if ($action == 'create') {
 	print $form->buttonsSaveCancel("Create");
 
 	print '</form>';
+
+	// Client-side required validation for Label (libelle), so the user gets an inline
+	// message with no page reload instead of relying only on the server-side check.
+	print '<script type="text/javascript">
+	jQuery(document).ready(function() {
+		jQuery("#formwarehousecreate").on("submit", function(e) {
+			var $libelle = jQuery("#libelle");
+			var $error = jQuery("#libelle_error");
+			if (jQuery.trim($libelle.val()) === "") {
+				e.preventDefault();
+				$error.text("'.dol_escape_js($langs->trans("ErrorFieldRequired", $langs->transnoentities("Ref"))).'").show();
+				$libelle.trigger("focus");
+				return false;
+			}
+			$error.hide();
+		});
+	});
+	</script>'."\n";
 } else {
 	$id = GETPOSTINT("id");
 	if ($id > 0 || $ref) {
