@@ -319,7 +319,7 @@ if ($action == 'create') {
 
 	dol_set_focus('input[name="libelle"]');
 
-	print '<form action="'.$_SERVER["PHP_SELF"].'" method="post">'."\n";
+	print '<form id="formcreatewarehouse" action="'.$_SERVER["PHP_SELF"].'" method="post">'."\n";
 	print '<input type="hidden" name="token" value="'.newToken().'">';
 	print '<input type="hidden" name="action" value="add">';
 	print '<input type="hidden" name="backtopage" value="'.$backtopage.'">';
@@ -329,7 +329,9 @@ if ($action == 'create') {
 	print '<table class="border centpercent">';
 
 	// Ref
-	print '<tr><td class="titlefieldcreate fieldrequired">'.$langs->trans("Ref").'</td><td><input class="width200" name="libelle" value=""></td></tr>';
+	print '<tr><td class="titlefieldcreate fieldrequired">'.$langs->trans("Ref").'</td><td><input class="width200" id="libelle" name="libelle" value="">';
+	print ' <span id="libelle-error" class="error" style="display:none;"></span>';
+	print '</td></tr>';
 
 	print '<tr><td>'.$langs->trans("LocationSummary").'</td><td><input name="lieu" size="40" value="'.(!empty($object->lieu) ? $object->lieu : '').'"></td></tr>';
 
@@ -420,6 +422,24 @@ if ($action == 'create') {
 	print $form->buttonsSaveCancel("Create");
 
 	print '</form>';
+
+	// Client-side required-field validation for Label, mirroring the server-side check in card.php action=add.
+	// Kept scoped to the warehouse create form only (#formcreatewarehouse).
+	print '<script type="text/javascript">
+	jQuery(document).ready(function() {
+		jQuery("#formcreatewarehouse").on("submit", function(e) {
+			var $libelle = jQuery("#libelle");
+			var $error = jQuery("#libelle-error");
+			if (jQuery.trim($libelle.val()) === "") {
+				e.preventDefault();
+				$error.text("Label is required").show();
+				$libelle.trigger("focus");
+				return false;
+			}
+			$error.hide();
+		});
+	});
+	</script>';
 } else {
 	$id = GETPOSTINT("id");
 	if ($id > 0 || $ref) {

@@ -1,0 +1,10 @@
+{
+  "name": "New warehouse form - Label required client-side validation",
+  "start_path": "/product/stock/card.php?action=create",
+  "steps": [
+    {"action": "wait_for", "selector": "#formcreatewarehouse", "timeout": 8000},
+    {"action": "click", "selector": "#formcreatewarehouse input[name=\"add\"], #formcreatewarehouse button[name=\"add\"]"},
+    {"action": "wait_for", "selector": "#libelle-error", "timeout": 8000},
+    {"action": "screenshot", "name": "label-required-inline-error"}
+  ]
+}
