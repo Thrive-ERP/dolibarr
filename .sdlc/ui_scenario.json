@@ -1,0 +1,9 @@
+{
+  "name": "Hide inactive users toggle",
+  "description": "With MAIN_HIDE_INACTIVE_USERS enabled, the default Users list no longer shows the seeded disabled user row.",
+  "start_path": "/user/list.php",
+  "steps": [
+    {"action": "wait_for", "selector": "table.liste", "timeout": 8000},
+    {"action": "screenshot", "name": "users-list-default-filter", "caption": "Default Users list with the disabled QA seed user hidden"}
+  ]
+}

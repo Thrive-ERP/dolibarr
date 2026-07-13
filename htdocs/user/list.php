@@ -207,7 +207,9 @@ if (!empty($catid) && empty($search_categ)) {
 }
 
 // Default search
-if ($search_status == '' && empty($search_all)) {
+// MAIN_HIDE_INACTIVE_USERS (Setup > Other setup, entity-scoped, default 0): when enabled, disabled
+// users are excluded from the default (unfiltered) list view only; explicit search_status stays untouched.
+if ($search_status == '' && empty($search_all) && getDolGlobalBool('MAIN_HIDE_INACTIVE_USERS')) {
 	$search_status = '1';
 }
 if ($contextpage == 'employeelist' && !GETPOSTISSET('search_employee')) {
