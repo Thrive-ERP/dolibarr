@@ -232,7 +232,7 @@ class mod_facture_terre extends ModeleNumRefFactures
 		$sql = "SELECT MAX(CAST(SUBSTRING(ref FROM ".$posindice.") AS SIGNED)) as max"; // This is standard SQL
 		$sql .= " FROM ".MAIN_DB_PREFIX."facture";
 		$sql .= " WHERE ref LIKE '".$db->escape($prefix)."____-%'";
-		$sql .= " AND entity IN (".getEntity('invoicenumber', 1, $invoice).")";
+		$sql .= " AND entity = ".((int) $invoice->entity);
 
 		$resql = $db->query($sql);
 		if ($resql) {
@@ -257,7 +257,7 @@ class mod_facture_terre extends ModeleNumRefFactures
 			$sql = "SELECT ref as ref";
 			$sql .= " FROM ".MAIN_DB_PREFIX."facture";
 			$sql .= " WHERE ref LIKE '".$db->escape($prefix)."____-".$num."'";
-			$sql .= " AND entity IN (".getEntity('invoicenumber', 1, $invoice).")";
+			$sql .= " AND entity = ".((int) $invoice->entity);
 			$sql .= " ORDER BY ref DESC";
 
 			$resql = $db->query($sql);

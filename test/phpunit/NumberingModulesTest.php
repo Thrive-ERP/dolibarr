@@ -609,4 +609,35 @@ class NumberingModulesTest extends CommonClassTest
 		print __METHOD__." result=".$result."\n";
 		$this->assertEquals('SH8001-0003', $result);	// counter must start to 1
 	}
+
+	/**
+	 * testFactureNumberingLock
+	 *
+	 * @return void
+	 */
+	public function testFactureNumberingLock()
+	{
+		global $db;
+
+		require_once dirname(__FILE__).'/../../htdocs/compta/facture/class/facture.class.php';
+
+		$localobject = new class($db) extends Facture {
+			public function lockRef()
+			{
+				return $this->acquireInvoiceNumberingLock();
+			}
+
+			public function unlockRef($lockname)
+			{
+				$this->releaseInvoiceNumberingLock($lockname);
+			}
+		};
+
+		$localobject->entity = 1;
+		$lockname = $localobject->lockRef();
+
+		$this->assertNotFalse($lockname, 'Invoice numbering lock should be acquired');
+		$localobject->unlockRef($lockname);
+		$this->assertTrue(true);
+	}
 }

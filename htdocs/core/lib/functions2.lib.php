@@ -1281,9 +1281,18 @@ function get_next_value($db, $mask, $table, $field, $where = '', $objsoc = '', $
 	}
 
 	if ($bentityon) { // only if entity enable
-		$sql .= " AND entity IN (".getEntity($sharetable).")";
+		if (($sharetable == 'invoicenumber' || $sharetable == 'invoice') && is_object($invoice) && !empty($invoice->entity)) {
+			// Invoice numbering must stay entity-specific even when other object types may share entity sets.
+			$sql .= " AND entity = ".((int) $invoice->entity);
+		} else {
+			$sql .= " AND entity IN (".getEntity($sharetable).")";
+		}
 	} elseif (!empty($forceentity)) {
-		$sql .= " AND entity IN (".$db->sanitize($forceentity).")";
+		if (($sharetable == 'invoicenumber' || $sharetable == 'invoice') && is_object($invoice) && !empty($invoice->entity)) {
+			$sql .= " AND entity = ".((int) $invoice->entity);
+		} else {
+			$sql .= " AND entity IN (".$db->sanitize($forceentity).")";
+		}
 	}
 	if ($where) {
 		$sql .= $where;

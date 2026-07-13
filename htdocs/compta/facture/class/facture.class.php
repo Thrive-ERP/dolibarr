@@ -3616,9 +3616,15 @@ class Facture extends CommonInvoice
 		}
 
 		$this->db->begin();
+		$numberingLock = $this->acquireInvoiceNumberingLock();
+		if ($numberingLock === false) {
+			$this->db->rollback();
+			return -1;
+		}
 
-		// Check parameters
-		if ($this->type == self::TYPE_REPLACEMENT) {		// if this is a replacement invoice
+		try {
+			// Check parameters
+			if ($this->type == self::TYPE_REPLACEMENT) {		// if this is a replacement invoice
 			// Check that source invoice is known
 			if ($this->fk_facture_source <= 0) {
 				$this->error = $langs->trans("ErrorFieldRequired", $langs->transnoentitiesnoconv("InvoiceReplacement"));
@@ -3653,28 +3659,28 @@ class Facture extends CommonInvoice
 			}
 		}
 
-		// Define new ref
-		if ($force_number) {
-			$num = $force_number;
-		} elseif (preg_match('/^[\(]?PROV/i', $this->ref) || empty($this->ref)) { // empty should not happened, but when it occurs, the test save life
-			if (getDolGlobalString('FAC_FORCE_DATE_VALIDATION')) {	// If option enabled, we force invoice date
-				$this->date = dol_now();
-				$this->date_lim_reglement = $this->calculate_date_lim_reglement();
+			// Define new ref
+			if ($force_number) {
+				$num = $force_number;
+			} elseif (preg_match('/^[\(]?PROV/i', $this->ref) || empty($this->ref)) { // empty should not happened, but when it occurs, the test save life
+				if (getDolGlobalString('FAC_FORCE_DATE_VALIDATION')) {	// If option enabled, we force invoice date
+					$this->date = dol_now();
+					$this->date_lim_reglement = $this->calculate_date_lim_reglement();
+				}
+				$num = $this->getNextNumRef($this->thirdparty);
+			} else {
+				$num = $this->ref;
 			}
-			$num = $this->getNextNumRef($this->thirdparty);
-		} else {
-			$num = $this->ref;
-		}
 
-		if (!$num) {
-			$error++;
-		} else {
-			$this->oldref = $this->ref;
-			$this->newref = dol_sanitizeFileName($num);
-		}
+			if (!$num) {
+				$error++;
+			} else {
+				$this->oldref = $this->ref;
+				$this->newref = dol_sanitizeFileName($num);
+			}
 
-		if (!$error) {
-			$this->update_price(1);
+			if (!$error) {
+				$this->update_price(1);
 
 			// Validate
 			$sql = 'UPDATE '.MAIN_DB_PREFIX.'facture';
@@ -3691,11 +3697,11 @@ class Facture extends CommonInvoice
 				$this->error = $this->db->lasterror();
 				$error++;
 			}
-		}
+			}
 
-		if (!$error) {
-			// Define third party as a customer
-			$result = $this->thirdparty->setAsCustomer();
+			if (!$error) {
+				// Define third party as a customer
+				$result = $this->thirdparty->setAsCustomer();
 
 			// If active (STOCK_CALCULATE_ON_BILL), we decrement the main product and its components at invoice validation
 			if ($this->type != self::TYPE_DEPOSIT && $result >= 0 && isModEnabled('stock') && getDolGlobalString('STOCK_CALCULATE_ON_BILL') && $idwarehouse > 0) {
@@ -3907,18 +3913,18 @@ class Facture extends CommonInvoice
 					$this->setFinal($user);
 				}
 			}
-		}
+			}
 
-		// All database actions are now complete
-		// We rename the directory and files on disk if old dir was a temporary ref.
-		if (!$error && preg_match('/^[\(]?PROV/i', $this->oldref)) {
-			// We rename directory ($this->ref = old ref, $num = new ref) in order not to lose the attachments
-			$oldref = dol_sanitizeFileName($this->oldref);
-			$newref = dol_sanitizeFileName($num);
-			$dirsource = $conf->facture->dir_output.'/'.$oldref;
-			$dirdest = $conf->facture->dir_output.'/'.$newref;
-			if (!$error && file_exists($dirsource)) {
-				dol_syslog(get_class($this)."::validate rename dir ".$dirsource." into ".$dirdest);
+			// All database actions are now complete
+			// We rename the directory and files on disk if old dir was a temporary ref.
+			if (!$error && preg_match('/^[\(]?PROV/i', $this->oldref)) {
+				// We rename directory ($this->ref = old ref, $num = new ref) in order not to lose the attachments
+				$oldref = dol_sanitizeFileName($this->oldref);
+				$newref = dol_sanitizeFileName($num);
+				$dirsource = $conf->facture->dir_output.'/'.$oldref;
+				$dirdest = $conf->facture->dir_output.'/'.$newref;
+				if (!$error && file_exists($dirsource)) {
+					dol_syslog(get_class($this)."::validate rename dir ".$dirsource." into ".$dirdest);
 
 				if (@rename($dirsource, $dirdest)) {
 					dol_syslog("Rename ok");
@@ -3935,12 +3941,76 @@ class Facture extends CommonInvoice
 			}
 		}
 
-		if (!$error) {
-			$this->db->commit();
-			return 1;
-		} else {
-			$this->db->rollback();
-			return -1;
+			if (!$error) {
+				$this->db->commit();
+				return 1;
+			} else {
+				$this->db->rollback();
+				return -1;
+			}
+		} finally {
+			$this->releaseInvoiceNumberingLock($numberingLock);
+		}
+	}
+
+	/**
+	 * Acquire a per-entity lock while an invoice reference is allocated.
+	 *
+	 * This avoids two concurrent validations reading the same MAX(ref) for the
+	 * same entity and issuing the same next number.
+	 *
+	 * @return string|false
+	 */
+	protected function acquireInvoiceNumberingLock()
+	{
+		$entity = (int) $this->entity;
+		if ($entity <= 0) {
+			$entity = 1;
+		}
+
+		$lockname = 'dolibarr_facture_'.$entity;
+		if ($this->db->type == 'pgsql') {
+			$sql = "SELECT pg_advisory_xact_lock(hashtext('".$this->db->escape($lockname)."'))";
+			if (!$this->db->query($sql)) {
+				$this->error = $this->db->lasterror();
+				return false;
+			}
+			return $lockname;
+		}
+
+		if ($this->db->type == 'mysql' || $this->db->type == 'mysqli') {
+			$sql = "SELECT GET_LOCK('".$this->db->escape($lockname)."', 10) as locked";
+			$resql = $this->db->query($sql);
+			if (!$resql) {
+				$this->error = $this->db->lasterror();
+				return false;
+			}
+
+			$obj = $this->db->fetch_object($resql);
+			if (empty($obj) || (int) $obj->locked !== 1) {
+				$this->error = 'Invoice numbering lock timeout';
+				return false;
+			}
+		}
+
+		return $lockname;
+	}
+
+	/**
+	 * Release the per-entity lock used during invoice validation.
+	 *
+	 * @param string|false $lockname Lock name returned by acquireInvoiceNumberingLock()
+	 * @return void
+	 */
+	protected function releaseInvoiceNumberingLock($lockname)
+	{
+		if (empty($lockname)) {
+			return;
+		}
+
+		if ($this->db->type == 'mysql' || $this->db->type == 'mysqli') {
+			$sql = "SELECT RELEASE_LOCK('".$this->db->escape($lockname)."')";
+			$this->db->query($sql);
 		}
 	}
 
