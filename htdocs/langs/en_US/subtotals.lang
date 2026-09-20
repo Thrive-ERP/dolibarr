@@ -10,7 +10,9 @@ Subtotal=Subtotals
 #
 SubtotalSetup=Subtotals module setup
 MaxSubtotalLevel=Maximum level
-SubtotalLineBackColor=Level %s lines background color
+SubtotalBackColor=Background color
+SubtotalTextColor=Text color
+SubtotalFootColorScreenOnly=Applied on the screen only. On the PDF, the subtotal line keeps the colors of its title line.
 NotSupportedByAllPDF=Will work with newer PDF but not with old ones %s
 
 #
@@ -37,6 +39,10 @@ CorrespondingTitleLine=Corresponding title line
 SelectVATRate=Select VAT rate
 EnterRemisePercent=Enter discount percent
 ApplyVATForBlock=Apply VAT for this block
+CollapseBlock=Hide the lines of this block
+ExpandBlock=Show the lines of this block
+DuplicateBlock=Duplicate this block
+ConfirmDuplicateBlock=Are you sure you want to duplicate this block? The description of the title lines of the copy will be changed to stay unique in the document.
 ApplyDiscountForBlock=Apply discount for this block
 TitleUnderSameLevelSTLine=Title of the same level must be under the previous title's subtotal line.
 TitleUnderSameLevelOrGreater=Title must be under a title of the same level or greater.
@@ -47,6 +53,8 @@ STLineUnderCorrespondingTitle=Subtotal line must be under a title of the same le
 STLineUnderTitle=Subtotal line must be under its title
 UnsupportedModuleError=You can't add a subtotals line in unsupported module
 CorrespondingTitleNotFound=The corresponding title was not found
+TitleLineNotFound=The title line of the block was not found
+DuplicateBlockNeedDraft=Only a draft document can have a block duplicated
 
 #
 # PDF

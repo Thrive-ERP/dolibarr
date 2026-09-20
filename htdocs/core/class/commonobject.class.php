@@ -5741,10 +5741,11 @@ abstract class CommonObject
 		$this->tpl['remise_percent'] = (($line->info_bits & 2) != 2) ? vatrate((string) $line->remise_percent, true) : '&nbsp;';
 
 		// Is the line strike or not
+		// Note: a title or a subtotal line is not striked. It is selected and copied into the new object
+		// like the other lines, so showing it as disabled would be misleading. It is still striked when
+		// the list is restricted to the services, like any other line that will not be copied.
 		$this->tpl['strike'] = 0;
 		if ($restrictlist == 'services' && $line->product_type != Product::TYPE_SERVICE) {
-			$this->tpl['strike'] = 1;
-		} elseif ($line->special_code == SUBTOTALS_SPECIAL_CODE) {
 			$this->tpl['strike'] = 1;
 		}
 
