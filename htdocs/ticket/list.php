@@ -235,6 +235,7 @@ if (empty($reshook)) {
 		}
 		$toselect = array();
 		$search_array_options = array();
+		$search_societe = '';
 		$search_date_start = '';
 		$search_date_end = '';
 		$search_dateread_start = '';
@@ -779,7 +780,7 @@ if ($projectid) {
 	print '<input type="hidden" name="projectid" value="'.$projectid.'" >';
 }
 
-$url = DOL_URL_ROOT.'/ticket/card.php?action=create'.($socid ? '&socid='.$socid : '').($projectid ? '&origin=projet_project&originid='.$projectid : '');
+$url = DOL_URL_ROOT.'/ticket/card.php?action=create&mode=init'.($socid ? '&socid='.$socid : '').($projectid ? '&origin=projet_project&originid='.$projectid : '');
 if (!empty($socid)) {
 	$url .= '&socid='.$socid;
 }

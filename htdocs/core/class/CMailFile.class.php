@@ -1173,6 +1173,10 @@ class CMailFile
 								getDolGlobalString('OAUTH_'.getDolGlobalString($keyforsmtpoauthservice).'_URLCALLBACK')
 							);
 							$serviceFactory = new \OAuth\ServiceFactory();
+							// Force the curl client, the default stream one uses file_get_contents() which
+							// fails to reach the token endpoint on many setups, so the token is never refreshed.
+							$httpClient = new \OAuth\Common\Http\Client\CurlClient();
+							$serviceFactory->setHttpClient($httpClient);
 							$oauthname = explode('-', $OAUTH_SERVICENAME);
 							// ex service is Google-Emails we need only the first part Google
 							$apiService = $serviceFactory->createService($oauthname[0], $credentials, $storage, array());
@@ -1343,6 +1347,10 @@ class CMailFile
 								getDolGlobalString('OAUTH_'.getDolGlobalString($keyforsmtpoauthservice).'_URLCALLBACK')
 							);
 							$serviceFactory = new \OAuth\ServiceFactory();
+							// Force the curl client, the default stream one uses file_get_contents() which
+							// fails to reach the token endpoint on many setups, so the token is never refreshed.
+							$httpClient = new \OAuth\Common\Http\Client\CurlClient();
+							$serviceFactory->setHttpClient($httpClient);
 							$oauthname = explode('-', $OAUTH_SERVICENAME);
 							// ex service is Google-Emails we need only the first part Google
 							$apiService = $serviceFactory->createService($oauthname[0], $credentials, $storage, array());
@@ -2061,8 +2069,10 @@ class CMailFile
 			$i = 0;
 			// We are interested in $matches[1] only (the second set of parenthesis into regex)
 			foreach ($matches[1] as $full) {
+				$full = urldecode($full);
+
 				$regs = array();
-				if (preg_match('/file=([A-Za-z0-9_\-\/]+[\.]?[A-Za-z0-9]+)?$/i', $full, $regs)) {   // If xxx is 'file=aaa'
+				if (preg_match('/file=([A-Za-z0-9_\-\/ ]+[\.]?[A-Za-z0-9]+)?$/i', $full, $regs)) {   // If xxx is 'file=aaa'
 					$img = $regs[1];
 
 					if (file_exists($images_dir.'/'.$img)) {

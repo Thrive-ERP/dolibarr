@@ -324,19 +324,23 @@ if (!$error && $massaction == 'confirm_presend') {
 
 			foreach ($listofobjectref[$thirdpartyid] as $objectid => $objectobj) {
 				//var_dump($thirdpartyid.' - '.$objectid.' - '.$objectobj->statut);
-				if ($objectclass == 'Propal' && $objectobj->status == Propal::STATUS_DRAFT) {
+				// Honour the same per-object hidden constants used by the "Send by email"
+				// button on the card pages (comm/propal/card.php, commande/card.php,
+				// compta/facture/card.php) so the behaviour is consistent between the
+				// single-object action and the mass action.
+				if ($objectclass == 'Propal' && $objectobj->status == Propal::STATUS_DRAFT && !getDolGlobalString('PROPOSAL_SENDBYEMAIL_FOR_ALL_STATUS')) {
 					$langs->load("errors");
 					$nbignored++;
 					$resaction .= '<div class="error">'.$langs->trans('ErrorOnlyProposalNotDraftCanBeSentInMassAction', $objectobj->ref).'</div><br>';
 					continue; // Payment done or started or canceled
 				}
-				if ($objectclass == 'Commande' && $objectobj->status == Commande::STATUS_DRAFT) {
+				if ($objectclass == 'Commande' && $objectobj->status == Commande::STATUS_DRAFT && !getDolGlobalString('COMMANDE_SENDBYEMAIL_FOR_ALL_STATUS')) {
 					$langs->load("errors");
 					$nbignored++;
 					$resaction .= '<div class="error">'.$langs->trans('ErrorOnlyOrderNotDraftCanBeSentInMassAction', $objectobj->ref).'</div><br>';
 					continue;
 				}
-				if ($objectclass == 'Facture' && $objectobj->status == Facture::STATUS_DRAFT) {
+				if ($objectclass == 'Facture' && $objectobj->status == Facture::STATUS_DRAFT && !getDolGlobalString('FACTURE_SENDBYEMAIL_FOR_ALL_STATUS')) {
 					$langs->load("errors");
 					$nbignored++;
 					$resaction .= '<div class="error">'.$langs->trans('ErrorOnlyInvoiceValidatedCanBeSentInMassAction', $objectobj->ref).'</div><br>';
@@ -1892,7 +1896,7 @@ if (!$error && ($massaction == 'clonetasks' || ($action == 'clonetasks' && $conf
 	if (empty($newproject->public)) {
 		$tmps = $newproject->getProjectsAuthorizedForUser($user, 0, 1, 0, '(fk_statut:=:1)');	// We check only open project (cloning on closed is not allowed)
 		$tmparray = explode(',', $tmps);
-		if (!in_array($newproject->id, $tmparray)) {
+		if (in_array($newproject->id, $tmparray)) {
 			$iscontactofnewproject = 1;
 		}
 	}
@@ -1904,8 +1908,30 @@ if (!$error && ($massaction == 'clonetasks' || ($action == 'clonetasks' && $conf
 	}
 
 	if ($permisstiontoadd) {
+		$taskidsmapping = array();		// old task id => new cloned task id
+		$clonedtaskoldparent = array();	// new cloned task id => old parent task id
+
+		// Build the list of projects the current user is allowed to read, used to authorize
+		// every source task against its actual project before cloning it (the previous fix for
+		// CVE-2026-77923 only validated the destination project).
+		$authorizedsourceprojects = null;
+		if (!$user->hasRight('projet', 'all', 'lire')) {
+			$sourceprojectstatic = new Project($db);
+			$tmps = $sourceprojectstatic->getProjectsAuthorizedForUser($user, 0, 1, 0);
+			$authorizedsourceprojects = explode(',', $tmps);
+		}
+
 		foreach (GETPOST('selected') as $task) {
-			$origin_task->fetch($task, '', 0);
+			if ($origin_task->fetch($task, '', 0) <= 0) {
+				continue;	// Source task not found, skip it
+			}
+
+			// Authorize the source task against its actual project before cloning it
+			if (is_array($authorizedsourceprojects) && !in_array($origin_task->fk_project, $authorizedsourceprojects)) {
+				setEventMessages($langs->trans('NotEnoughPermissions'), null, 'errors');
+				$error++;
+				break;
+			}
 
 			$defaultref = '';
 			$classnamemodtask = getDolGlobalString('PROJECT_TASK_ADDON', 'mod_task_simple');
@@ -1935,6 +1961,8 @@ if (!$error && ($massaction == 'clonetasks' || ($action == 'clonetasks' && $conf
 
 				if ($taskid > 0) {
 					$result = $clone_task->add_contact(GETPOSTINT("userid"), 'TASKEXECUTIVE', 'internal');
+					$taskidsmapping[$task] = $taskid;						// remember old id => new id
+					$clonedtaskoldparent[$taskid] = $origin_task->fk_task_parent;	// remember new id => old parent id
 					$num++;
 				} else {
 					if ($db->lasterrno() == 'DB_ERROR_RECORD_ALREADY_EXISTS') {
@@ -1946,6 +1974,26 @@ if (!$error && ($massaction == 'clonetasks' || ($action == 'clonetasks' && $conf
 					}
 					$action = 'list';
 					$error++;
+				}
+			}
+		}
+
+		// Remap the parent of cloned tasks: if a cloned task's original parent was also cloned, point it to the
+		// new parent instead of the old id, otherwise the cloned sub-task would reference a task from the source
+		// project and end up orphaned (#39596). If the old parent was not cloned, detach it (set to 0).
+		if (!$error) {
+			foreach ($clonedtaskoldparent as $newtaskid => $oldparentid) {
+				if (empty($oldparentid)) {
+					continue;
+				}
+				$newparentid = isset($taskidsmapping[$oldparentid]) ? $taskidsmapping[$oldparentid] : 0;
+				$remaptask = new Task($db);
+				if ($remaptask->fetch($newtaskid) > 0 && $remaptask->fk_task_parent != $newparentid) {
+					$remaptask->fk_task_parent = $newparentid;
+					if ($remaptask->update($user) < 0) {
+						setEventMessages($remaptask->error, $remaptask->errors, 'errors');
+						$error++;
+					}
 				}
 			}
 		}

@@ -185,10 +185,18 @@ if ($action == 'order' && GETPOST('valid') && $user->hasRight('fournisseur', 'co
 				$box = $i;
 				$supplierpriceid = GETPOSTINT('fourn'.$i);
 				//get all the parameters needed to create a line
+
 				$qty = GETPOSTFLOAT('tobuy'.$i);
-				$idprod = $productsupplier->get_buyprice($supplierpriceid, $qty);
+				// Pass fk_soc = $fk_supplier so that, if the exact price tier (id $supplierpriceid) does not match
+				// the requested qty (fallback search in get_buyprice()), the fallback stays restricted to the
+				// supplier selected in the replenishment filter instead of matching any product/supplier in base.
+				$idprod = $productsupplier->get_buyprice($supplierpriceid, $qty, 0, 'none', $fk_supplier);
 				$res = $productsupplier->fetch($idprod);
-				if ($res && $idprod > 0) {
+				if ($res && $idprod > 0 && $fk_supplier > 0 && (int) $productsupplier->fourn_socid !== (int) $fk_supplier) {
+					// Safety net: never let a line be attached to a supplier different from the one filtered on.
+					dol_syslog("replenish.php: get_buyprice returned fourn_socid=".$productsupplier->fourn_socid." for fk_product=".$idprod." instead of expected fk_supplier=".$fk_supplier." (line $i, product_fournisseur_price id $supplierpriceid, qty $qty)", LOG_WARNING);
+					$errorQty++;
+				} elseif ($res && $idprod > 0) {
 					if ($qty) {
 						//might need some value checks
 						$line = new CommandeFournisseurLigne($db);
@@ -517,16 +525,23 @@ if ($usevirtualstock) {
 		$sqlProductionToProduce = '0';
 	}
 
+	$parameters = array();
+	$sqlHookVirtualStock = "0";
+	$reshook = $hookmanager->executeHooks('printFieldListHavingVirtualStock', $parameters); // Note that $action and $object may have been modified by hook
+	if (!empty($hookmanager->resPrint)) {
+		$sqlHookVirtualStock = $hookmanager->resPrint;
+	}
+
 	$sql .= ' HAVING (';
 	$sql .= " (" . $sqldesiredtock . " >= 0 AND (" . $sqldesiredtock . " > SUM(" . $db->ifsql("s.reel IS NULL", "0", "s.reel") . ')';
-	$sql .= " - (" . $sqlCommandesCli . " - " . $sqlExpeditionsCli . ") + (" . $sqlCommandesFourn . " - " . $sqlReceptionFourn . ") + (" . $sqlProductionToProduce . " - " . $sqlProductionToConsume . ")))";
+	$sql .= " - (" . $sqlCommandesCli . " - " . $sqlExpeditionsCli . ") + (" . $sqlCommandesFourn . " - " . $sqlReceptionFourn . ") + (" . $sqlProductionToProduce . " - " . $sqlProductionToConsume . ") + ".$sqlHookVirtualStock."))";
 	$sql .= ' OR';
 	if ($includeproductswithoutdesiredqty == 'on') {
 		$sql .= " ((" . $sqlalertstock . " >= 0 OR " . $sqlalertstock . " IS NULL) AND (" . $db->ifsql($sqlalertstock . " IS NULL", "0", $sqlalertstock) . " > SUM(" . $db->ifsql("s.reel IS NULL", "0", "s.reel") . ")";
 	} else {
 		$sql .= " (" . $sqlalertstock . " >= 0 AND (" . $sqlalertstock . " > SUM(" . $db->ifsql("s.reel IS NULL", "0", "s.reel") . ')';
 	}
-	$sql .= " - (" . $sqlCommandesCli . " - " . $sqlExpeditionsCli . ") + (" . $sqlCommandesFourn . " - " . $sqlReceptionFourn . ") + (" . $sqlProductionToProduce . " - " . $sqlProductionToConsume . ")))";
+	$sql .= " - (" . $sqlCommandesCli . " - " . $sqlExpeditionsCli . ") + (" . $sqlCommandesFourn . " - " . $sqlReceptionFourn . ") + (" . $sqlProductionToProduce . " - " . $sqlProductionToConsume . ") + ".$sqlHookVirtualStock."))";
 	$sql .= ")";
 	if (getDolGlobalString('STOCK_ALLOW_ADD_LIMIT_STOCK_BY_WAREHOUSE') && $fk_entrepot > 0) {
 		$sql .= " AND (";
@@ -540,7 +555,7 @@ if ($usevirtualstock) {
 		} else {
 			$sql .= $sqlalertstock . " >= 0 AND (" . $sqlalertstock . " > SUM(" . $db->ifsql("s.reel IS NULL", "0", "s.reel") . ")";
 		}
-		$sql .= " - (" . $sqlCommandesCli . " - " . $sqlExpeditionsCli . ") + (" . $sqlCommandesFourn . " - " . $sqlReceptionFourn . ")  + (" . $sqlProductionToProduce . " - " . $sqlProductionToConsume . "))";
+		$sql .= " - (" . $sqlCommandesCli . " - " . $sqlExpeditionsCli . ") + (" . $sqlCommandesFourn . " - " . $sqlReceptionFourn . ")  + (" . $sqlProductionToProduce . " - " . $sqlProductionToConsume . ") + ".$sqlHookVirtualStock.")";
 		$sql .= ")";
 		$alertchecked = 'checked';
 	}

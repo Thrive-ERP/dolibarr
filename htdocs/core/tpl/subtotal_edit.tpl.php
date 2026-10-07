@@ -124,29 +124,34 @@ if (getDolGlobalString('PRODUCT_USE_UNITS')) {
 
 
 	if (!$situationinvoicelinewithparent) {
-		print '<input type="text" name="line_desc" class="marginrightonly" id="line_desc" value="';
-		print GETPOSTISSET('product_desc') ? GETPOST('product_desc', 'restricthtml') : $line->description . '"';
+		print '<textarea name="line_desc" class="marginrightonly width200" rows="3" id="line_desc"';
 		$disabled = 0;
 		if ($line_type == 'subtotal') {
 			print ' readonly="readonly"';
 			$disabled = 1;
 		}
 		print '>';
+		print dol_escape_htmltag(GETPOSTISSET('product_desc') ? GETPOST('product_desc', 'restricthtml') : $line->description);
+		print '</textarea>';
 		$depth_array = $this->getPossibleLevels($langs);
-		print $form->selectarray('line_depth', $depth_array, abs($line->qty), 0, 0, 0, '', 0, 0, $disabled);
+		print '<div class="margintoponly">';
+		print $form->selectarray('line_depth', $depth_array, abs($line->qty), 0, 0, 0, '', 0, 0, $disabled, '', 'minwidth75 valignmiddle');
+		print '</div>';
 		if ($disabled) {
 			print '<input type="hidden" name="line_depth" value="' . $line->qty . '">';
 		}
-		print '<div><ul class="ecmjqft">';
+		print '<div class="margintoponly">';
 		foreach ($line_options as $key => $value) {
 			if (in_array($line_type, $value['type'])) {
-				print '<li><label for="' . $key . '">' . $langs->trans($value['trans_key']) . '</label>';
-				print '<input style="float: left;" id="' . $key . '" type="checkbox" name="' . $key . '" value="' . $value['value'] . '" ';
-				print $value['checked'] ? 'checked' : '';
-				print '></li>';
+				print '<label for="' . $key . '" class="inline-block valignmiddle marginrightonly nowraponall">';
+				print '<input class="valignmiddle marginrightonlyshort" id="' . $key . '" type="checkbox" name="' . $key . '" value="' . $value['value'] . '"';
+				print $value['checked'] ? ' checked' : '';
+				print '>';
+				print '<span class="valignmiddle">' . $langs->trans($value['trans_key']) . '</span>';
+				print '</label>';
 			}
 		}
-		print '</ul></div></td>';
+		print '</div></td>';
 		print '<td colspan="' . $colspan . '" class="right"></td>';
 	} else {
 		print '<input type="text" readonly name="line_desc" id="line_desc" value="';

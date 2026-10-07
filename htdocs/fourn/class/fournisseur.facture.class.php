@@ -1451,7 +1451,7 @@ class FactureFournisseur extends CommonInvoice
 	 *
 	 *  @param      User	$user		    User object
 	 *	@param	    int		$notrigger	    1=Does not execute triggers, 0= execute triggers
-	 *	@return		int						Return integer <0 if KO, >0 if OK
+	 *	@return		int						Return integer <0 if KO, 0=Refused, >0 if OK
 	 */
 	public function delete(User $user, $notrigger = 0)
 	{
@@ -1461,7 +1461,12 @@ class FactureFournisseur extends CommonInvoice
 
 		dol_syslog("FactureFournisseur::delete rowid=".$rowid, LOG_DEBUG);
 
-		// TODO Test if there is at least on payment. If yes, refuse to delete.
+		// Test to avoid invoice deletion (invoice transferred into accountancy, with payment, ...), same test as Facture::delete()
+		$result = $this->is_erasable();
+		if ($result <= 0) {
+			dol_syslog(get_class($this)."::delete refused, invoice is not erasable (code ".$result.")", LOG_WARNING);
+			return 0;
+		}
 
 		$error = 0;
 		$this->db->begin();
@@ -1537,10 +1542,10 @@ class FactureFournisseur extends CommonInvoice
 			$this->deleteEcmFiles(1); // Deleting files physically is done later with the dol_delete_dir_recursive
 
 			// We remove directory
-			if ($conf->fournisseur->facture->dir_output) {
+			$ref = dol_sanitizeFileName($this->ref);
+			if ($conf->fournisseur->facture->dir_output && !empty($ref)) {
 				include_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
 
-				$ref = dol_sanitizeFileName($this->ref);
 				$dir = $conf->fournisseur->facture->dir_output.'/'.get_exdir($this->id, 2, 0, 0, $this, 'invoice_supplier').$ref;
 				$file = $dir."/".$ref.".pdf";
 				if (file_exists($file)) {

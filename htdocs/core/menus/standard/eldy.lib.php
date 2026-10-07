@@ -512,7 +512,10 @@ function print_eldy_menu($db, $atarget, $type_user, &$tabMenu, &$menu, $noout = 
 			$url = $shorturl = $tmp[0];
 			$param = (isset($tmp[1]) ? $tmp[1] : '');
 
-			if ((!preg_match('/mainmenu/i', $param)) || !preg_match('/leftmenu/i', $param)) {
+			// Complete the url only when neither mainmenu nor leftmenu is already set, like print_left_eldy_menu() does.
+			// With a OR, a url already carrying only mainmenu got a second one, and a url already carrying only leftmenu
+			// got an empty leftmenu appended that overrode the real value.
+			if ((!preg_match('/mainmenu/i', $param)) && (!preg_match('/leftmenu/i', $param))) {
 				// @phan-suppress-next-line PhanTypeSuspiciousStringExpression
 				$param .= ($param ? '&' : '').'mainmenu='.$newTabMenu[$i]['mainmenu'].'&leftmenu=';
 			}
@@ -1738,7 +1741,7 @@ function get_left_menu_accountancy($mainmenu, &$newmenu, $usemenuhider = 1, $lef
 			//$newmenu->add("/accountancy/index.php?leftmenu=accountancy", $langs->trans("MenuAccountancy"), 0, $permtoshowmenu, '', $mainmenu, 'accountancy');
 
 			// Configuration
-			$newmenu->add("/accountancy/index.php?leftmenu=accountancy_admin", $langs->trans("Setup"), 0, $user->hasRight('accounting', 'chartofaccount'), '', $mainmenu, 'accountancy_admin', 1, '', '', '', img_picto('', 'technic', 'class="paddingright pictofixedwidth"'));
+			$newmenu->add("/accountancy/admin/index.php?mainmenu=accountancy&leftmenu=accountancy_admin", $langs->trans("Setup"), 0, $user->hasRight('accounting', 'chartofaccount'), '', $mainmenu, 'accountancy_admin', 1, '', '', '', img_picto('', 'technic', 'class="paddingright pictofixedwidth"'));
 			if ($usemenuhider || empty($leftmenu) || preg_match('/accountancy_admin/', $leftmenu)) {
 				global $mysoc;
 				$newmenu->add("/accountancy/admin/index.php?mainmenu=accountancy&leftmenu=accountancy_admin", $langs->trans("General"), 1, $user->hasRight('accounting', 'chartofaccount'), '', $mainmenu, 'accountancy_admin_general', 10);

@@ -18,7 +18,7 @@
  * Copyright (C) 2023		Nick Fragoulis
  * Copyright (C) 2023		Joachim Kueter			<git-jk@bloxera.com>
  * Copyright (C) 2024-2025	MDW						<mdeweerd@users.noreply.github.com>
- * Copyright (C) 2024-2025  Frédéric France			<frederic.france@free.fr>
+ * Copyright (C) 2024-2026  Frédéric France			<frederic.france@free.fr>
  * Copyright (C) 2024		Solution Libre SAS		<contact@solution-libre.fr>
  * Copyright (C) 2024		William Mead			<william.mead@manchenumerique.fr>
  *
@@ -210,6 +210,7 @@ $diroutputmassaction = $conf->invoice->dir_output.'/temp/massgeneration/'.$user-
 
 $now = dol_now();
 $error = 0;
+$sql = '';
 
 // Initialize a technical object to manage hooks of page. Note that conf->hooks_modules contains an array of hook context
 $object = new Facture($db);
@@ -237,6 +238,9 @@ if (empty($user->socid)) {
 	$fieldstosearchall["f.note_private"] = "NotePrivate";
 }
 
+// Show POS fields if cashdesk or takepos module enabled or if global configuration to show POS fields on order list is enabled
+$showpos = (isModEnabled('cashdesk') || isModEnabled('takepos') || getDolGlobalInt('INVOICE_SHOW_POS')) ? '1' : '0';
+
 $checkedtypetiers = '0';
 $arrayfields = array(
 	'f.ref' => array('label' => "Ref", 'checked' => '1', 'position' => 5),
@@ -261,8 +265,8 @@ $arrayfields = array(
 	'f.fk_mode_reglement' => array('label' => "PaymentMode", 'checked' => '1', 'position' => 80),
 	'f.fk_cond_reglement' => array('label' => "PaymentConditionsShort", 'checked' => '1', 'position' => 85),
 	'f.fk_input_reason' => array('label' => "Source", 'checked' => 0, 'enabled' => 1, 'position' => 88),
-	'f.module_source' => array('label' => "POSModule", 'langfile' => 'cashdesk', 'checked' => ($contextpage == 'poslist' ? '1' : '0'), 'enabled' => "(isModEnabled('cashdesk') || isModEnabled('takepos') || getDolGlobalInt('INVOICE_SHOW_POS'))", 'position' => 90),
-	'f.pos_source' => array('label' => "POSTerminal", 'langfile' => 'cashdesk', 'checked' => ($contextpage == 'poslist' ? '1' : '0'), 'enabled' => "(isModEnabled('cashdesk') || isModEnabled('takepos') || getDolGlobalInt('INVOICE_SHOW_POS'))", 'position' => 91),
+	'f.module_source' => array('label' => "POSModule", 'langfile' => 'cashdesk', 'checked' => ($contextpage == 'poslist' ? '1' : '0'), 'enabled' => $showpos, 'position' => 90),
+	'f.pos_source' => array('label' => "POSTerminal", 'langfile' => 'cashdesk', 'checked' => ($contextpage == 'poslist' ? '1' : '0'), 'enabled' => $showpos, 'position' => 91),
 	'f.total_ht' => array('label' => "AmountHT", 'checked' => '1', 'position' => 95),
 	'f.total_tva' => array('label' => "AmountVAT", 'checked' => '0', 'position' => 100),
 	'f.total_localtax1' => array('label' => $langs->transcountry("AmountLT1", $mysoc->country_code), 'checked' => '0', 'enabled' => ($mysoc->localtax1_assuj == "1"), 'position' => 110),
@@ -332,7 +336,10 @@ foreach ($object->fields as $key => $val) {
 }
 // Extra fields
 include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_array_fields.tpl.php';
-
+// Add hook to complete $arrayfield
+$parameters = array('arrayfields' => &$arrayfields);
+$reshook = $hookmanager->executeHooks('completeArrayFields', $parameters, $object, $action); // Note that $action and $object may have been modified by hook
+$sql .= $hookmanager->resPrint;
 
 $object->fields = dol_sort_array($object->fields, 'position');
 $arrayfields = dol_sort_array($arrayfields, 'position');
@@ -489,24 +496,30 @@ if ($action == 'makepayment_confirm' && $user->hasRight('facture', 'paiement')) 
 					$errorpayment++;
 				} else {
 					if ($facture->type != Facture::TYPE_CREDIT_NOTE && $facture->status == Facture::STATUS_VALIDATED && $facture->paye == 0) {
-						$paiementAmount = $facture->getSommePaiement();
+						// Get both the base-currency and invoice-currency paid amount in a single query
+						$sommePaiement = $facture->getSommePaiement(-1);
+						$paiementAmount = $sommePaiement['alreadypaid'];
+
 						$totalcreditnotes = $facture->getSumCreditNotesUsed();
 						$totaldeposits = $facture->getSumDepositsUsed();
 
 						$totalallpayments = $paiementAmount + $totalcreditnotes + $totaldeposits;
-						$remaintopay = price2num($facture->total_ttc - $totalallpayments);
+						$remaintopay = (float) price2num($facture->total_ttc - $totalallpayments);
 
 						// hook to finalize the remaining amount, considering e.g. cash discount agreements
 						$parameters = array('remaintopay' => $remaintopay);
 						$reshook = $hookmanager->executeHooks('finalizeAmountOfInvoice', $parameters, $facture, $action); // Note that $action and $object may have been modified by some hooks
 						if ($reshook > 0) {
-							if (!empty($remain = $hookmanager->resArray['remaintopay'])) {
+							if (!empty($remain = (float) $hookmanager->resArray['remaintopay'])) {
 								$remaintopay = $remain;
 							}
 						} elseif ($reshook < 0) {
 							$error++;
 							setEventMessages($facture->ref.' '.$langs->trans("ProcessingError"), $hookmanager->errors, 'errors');
 						}
+
+						// Remain to pay in the invoice currency (may differ from $remaintopay when multicurrency is used)
+						$multicurrency_remaintopay = (float) price2num($facture->multicurrency_total_ttc - $sommePaiement['alreadypaid_multicurrency']);
 
 						if ($remaintopay != 0) {
 							$resultBank = $facture->setBankAccount($bankid);
@@ -517,7 +530,7 @@ if ($action == 'makepayment_confirm' && $user->hasRight('facture', 'paiement')) 
 								$paiement = new Paiement($db);
 								$paiement->datepaye = $paiementdate;
 								$paiement->amounts[$facture->id] = $remaintopay; // Array with all payments dispatching with invoice id
-								$paiement->multicurrency_amounts[$facture->id] = $remaintopay;
+								$paiement->multicurrency_amounts[$facture->id] = (float) $multicurrency_remaintopay;
 								$paiement->paiementid = $paiementid;
 								$paiement_id = $paiement->create($user, 1, $facture->thirdparty);
 								if ($paiement_id < 0) {
@@ -2238,7 +2251,7 @@ if ($num > 0) {
 		$remaintopay = price2num($facturestatic->total_ttc - $totalallpayments);
 
 		$multicurrency_totalpay = $multicurrency_paiement + $multicurrency_totalcreditnotes + $multicurrency_totaldeposits;
-		$multicurrency_remaintopay = price2num($facturestatic->multicurrency_total_ttc - $multicurrency_totalpay);
+		$multicurrency_remaintopay = (float) price2num($facturestatic->multicurrency_total_ttc - $multicurrency_totalpay);
 
 		if ($facturestatic->status == Facture::STATUS_CLOSED) {
 			$remaintopay = 0;
@@ -2250,7 +2263,7 @@ if ($num > 0) {
 			$totalallpayments = price2num($facturestatic->total_ttc - $remaintopay);
 			$multicurrency_remaincreditnote = $discount->getAvailableDiscounts($companystatic, null, 'rc.fk_facture_source='.$facturestatic->id, 0, 0, 1);
 			$multicurrency_remaintopay = -$multicurrency_remaincreditnote;
-			$multicurrency_totalpay = price2num($facturestatic->multicurrency_total_ttc - $multicurrency_remaintopay);
+			$multicurrency_totalpay = (float) price2num($facturestatic->multicurrency_total_ttc - $multicurrency_remaintopay);
 		}
 
 		$facturestatic->alreadypaid = $paiement;
@@ -2792,7 +2805,7 @@ if ($num > 0) {
 			// Currency rate
 			if (!empty($arrayfields['f.multicurrency_tx']['checked'])) {
 				print '<td class="nowraponall">';
-				$form->form_multicurrency_rate($_SERVER['PHP_SELF'].'?id='.$obj->rowid, $obj->multicurrency_tx, 'none', $obj->multicurrency_code);
+				$form->form_multicurrency_rate($_SERVER['PHP_SELF'].'?id='.$obj->id, $obj->multicurrency_tx, 'none', $obj->multicurrency_code);
 				print "</td>\n";
 				if (!$i) {
 					$totalarray['nbfield']++;

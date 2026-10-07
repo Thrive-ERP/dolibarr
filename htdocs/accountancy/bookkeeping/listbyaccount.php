@@ -2,10 +2,11 @@
 /* Copyright (C) 2016		Neil Orley				<neil.orley@oeris.fr>
  * Copyright (C) 2013-2016	Olivier Geffroy			<jeff@jeffinfo.com>
  * Copyright (C) 2013-2020	Florian Henry			<florian.henry@open-concept.pro>
- * Copyright (C) 2013-2025	Alexandre Spangaro		<alexandre@inovea-conseil.com>
+ * Copyright (C) 2013-2026	Alexandre Spangaro		<alexandre@inovea-conseil.com>
  * Copyright (C) 2018-2024	Frédéric France			<frederic.france@free.fr>
  * Copyright (C) 2024-2025	MDW						<mdeweerd@users.noreply.github.com>
  * Copyright (C) 2025		Nicolas Barrouillet		<nicolas@pragma-tech.fr>
+ * Copyright (C) 2026       Jose Martinez       <jose.martinez@pichinov.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -246,7 +247,11 @@ $error = 0;
 $result = -1; // For static analysis
 $documentlink = ''; // For static analysis
 
+// Permissions
+$permissiontoread = $user->hasRight('accounting', 'mouvements', 'lire');
 $permissiontoadd = $user->hasRight('accounting', 'mouvements', 'creer');
+$permissiontodelete = $user->hasRight('accounting', 'mouvements', 'supprimer');
+$permissiontoexport = $user->hasRight('accounting', 'mouvements', 'export');
 
 
 /*
@@ -460,11 +465,6 @@ if (empty($reshook)) {
 	if (!empty($type)) {
 		$param = '&type='.$type.$param;
 	}
-
-	// Permissions
-	$permissiontoread = $user->hasRight('societe', 'lire');
-	$permissiontodelete = $user->hasRight('societe', 'supprimer');
-	$permissiontoadd = $user->hasRight('societe', 'creer');
 
 	// Actions
 	if ($action === 'exporttopdf' && $permissiontoadd) {
@@ -906,7 +906,7 @@ if (empty($reshook)) {
 			$newcardbutton .= dolGetButtonTitle($langs->trans('GroupBySubAccountAccounting'), '', 'fa fa-align-left vmirror paddingleft imgforviewmode', DOL_URL_ROOT . '/accountancy/bookkeeping/listbyaccount.php?type=sub&' . $url_param, '', 1, array('morecss' => 'marginleftonly'));
 		}
 	}
-	$newcardbutton .= dolGetButtonTitle($langs->trans('ExportToPdf'), '', 'fa fa-file-pdf paddingleft', $_SERVER['PHP_SELF'] . '?action=exporttopdf'.(!empty($type) ? '&type=sub' : '').'&' . $url_param, '', 1, array('morecss' => 'marginleftonly'));
+	$newcardbutton .= dolGetButtonTitle($langs->trans('ExportToPdf'), '', 'fa fa-file-pdf paddingleft', $_SERVER['PHP_SELF'] . '?action=exporttopdf'.(!empty($type) ? '&type=sub' : '').'&' . $url_param, '', $permissiontoexport, array('morecss' => 'marginleftonly'));
 
 	$newcardbutton .= dolGetButtonTitleSeparator();
 
@@ -1514,7 +1514,7 @@ while ($i < min($num, $limit)) {
 		} elseif ($line->doc_type == 'bank') {
 			print $objectstatic->getNomUrl(1);
 			$bank_ref = strstr($line->doc_ref, '-');
-			print " " . $bank_ref;
+			print ' <span class="classfortooltip" title="'.dol_escape_htmltag($line->doc_ref).'">'.dol_escape_htmltag($bank_ref).'</span>';
 		} else {
 			print $line->doc_ref;
 		}
