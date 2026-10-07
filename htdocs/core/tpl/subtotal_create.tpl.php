@@ -47,17 +47,24 @@ if ($type == 'subtotal' && empty($titles)) {
 $formquestion = array();
 
 if ($type == 'title') {
+	// Default checkbox state from setup consts (0 by default for backward compatibility).
+	// Set SUBTOTAL_DEFAULT_TITRESHOWUPONPDF / SUBTOTAL_DEFAULT_TITRESHOWTOTALEXLUDINGVATONPDF
+	// to 1 via Setup > Other to check them by default.
+	$defaultShowUP = getDolGlobalInt('SUBTOTAL_DEFAULT_TITRESHOWUPONPDF');
+	$defaultShowTotalTitle = getDolGlobalInt('SUBTOTAL_DEFAULT_TITRESHOWTOTALEXLUDINGVATONPDF');
 	$formquestion = array(
 		array('type' => 'text', 'name' => 'subtotallinedesc', 'label' => $langs->trans("SubtotalLineDesc"), 'moreattr' => 'placeholder="' . $langs->trans("Description") . '"'),
 		array('type' => 'select', 'name' => 'subtotallinelevel', 'label' => $langs->trans("SubtotalLineLevel"), 'values' => $depth_array, 'default' => 1, 'select_show_empty' => 0),
-		array('type' => 'checkbox', 'value' => false, 'name' => 'titleshowuponpdf', 'label' => $langs->trans("ShowUPOnPDF")),
-		array('type' => 'checkbox', 'value' => false, 'name' => 'titleshowtotalexludingvatonpdf', 'label' => $langs->trans("ShowTotalExludingVATOnPDF")),
+		array('type' => 'checkbox', 'value' => (bool) $defaultShowUP, 'name' => 'titleshowuponpdf', 'label' => $langs->trans("ShowUPOnPDF")),
+		array('type' => 'checkbox', 'value' => (bool) $defaultShowTotalTitle, 'name' => 'titleshowtotalexludingvatonpdf', 'label' => $langs->trans("ShowTotalExludingVATOnPDF")),
 		array('type' => 'checkbox', 'value' => false, 'name' => 'titleforcepagebreak', 'label' => $langs->trans("ForcePageBreak")),
 	);
 } elseif ($type == 'subtotal') {
+	// Default checkbox state from setup const (0 by default for backward compatibility).
+	$defaultShowTotalSubtotal = getDolGlobalInt('SUBTOTAL_DEFAULT_SUBTOTALSHOWTOTALEXLUDINGVATONPDF');
 	$formquestion = array(
 		array('type' => 'select', 'name' => 'subtotaltitleline', 'label' => $langs->trans("CorrespondingTitleLine"), 'values' => $titles, 'select_show_empty' => 0),
-		array('type' => 'checkbox', 'value' => false, 'name' => 'subtotalshowtotalexludingvatonpdf', 'label' => $langs->trans("ShowTotalExludingVATOnPDF")),
+		array('type' => 'checkbox', 'value' => (bool) $defaultShowTotalSubtotal, 'name' => 'subtotalshowtotalexludingvatonpdf', 'label' => $langs->trans("ShowTotalExludingVATOnPDF")),
 	);
 }
 
