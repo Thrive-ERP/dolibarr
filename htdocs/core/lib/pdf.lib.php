@@ -1686,7 +1686,8 @@ function pdf_getlinedesc($object, $i, $outputlangs, $hideref = 0, $hidedesc = 0,
 	}
 
 	// Description long of product line
-	if (!empty($desc) && ($desc != $label)) {
+	// When label is hidden, show desc even if it equals label (else line would be empty).
+	if (!empty($desc) && ($desc != $label || getDolGlobalString('PDF_HIDE_PRODUCT_LABEL_IN_SUPPLIER_LINES'))) {
 		if ($desc == '(CREDIT_NOTE)' && $object->lines[$i]->fk_remise_except) {
 			$discount = new DiscountAbsolute($db);
 			$discount->fetch($object->lines[$i]->fk_remise_except);
@@ -2886,6 +2887,23 @@ function pdf_render_subtotals(
 	$yAfter = $pdf->GetY();
 	$pdf->rollbackTransaction(true);
 
+	// Use the colors configured in the subtotals module (title vs subtotal line background
+	// and text colors). The callers still pass the title background color only, so resolve
+	// the real colors here to avoid touching every PDF model.
+	if (method_exists($object, 'getSubtotalColors') && isset($object->lines[$i]->qty)) {
+		$subtotalBgHex = $object->getSubtotalColors($object->lines[$i]->qty);
+		if (!empty($subtotalBgHex)) {
+			$bgColor = colorStringToArray($subtotalBgHex);
+		}
+	}
+	$textColor = null;
+	if (method_exists($object, 'getSubtotalTextColors') && isset($object->lines[$i]->qty)) {
+		$subtotalTextHex = $object->getSubtotalTextColors($object->lines[$i]->qty);
+		if (!empty($subtotalTextHex)) {
+			$textColor = colorStringToArray($subtotalTextHex);
+		}
+	}
+
 	$pdf->SetFillColor($bgColor[0], $bgColor[1], $bgColor[2]);
 	$width = $generator->page_largeur - $generator->marge_droite - $generator->marge_gauche;
 
@@ -2895,6 +2913,15 @@ function pdf_render_subtotals(
 	} else {
 		$pdf->MultiCell($width, $pdf->getPageHeight() - $pdf->getBreakMargin() - $curY, '', 0, '', true);
 
+		// The height of the band was measured between startTransaction() and
+		// rollbackTransaction(true), which restores every object var from the snapshot. A page the
+		// measurement created is therefore gone, and setPage() on it aborts with "Wrong page number".
+		// Re-create it instead. TCPDF reuses an already added page (startPage(), tcpdf.php:3267),
+		// so the text printed below lands on this same page rather than adding another one.
+		while ($pdf->getNumPages() < $pageAfter) {
+			$pdf->AddPage();
+		}
+
 		$pdf->setPage($pageAfter);
 		$pdf->SetXY($generator->marge_gauche, $pdf->getMargins()['top']);
 		$pdf->MultiCell($width, max(0, $yAfter - $pdf->getMargins()['top']), '', 0, '', true);
@@ -2902,7 +2929,13 @@ function pdf_render_subtotals(
 		$pdf->setPage($savePage);
 	}
 
-	$pdf->SetTextColor(colorIsLight(implode(',', $bgColor)));
+	if (is_array($textColor) && count($textColor) >= 3) {
+		$pdf->SetTextColor($textColor[0], $textColor[1], $textColor[2]);
+	} elseif (colorIsLight(implode(',', $bgColor))) {
+		$pdf->SetTextColor(0, 0, 0);
+	} else {
+		$pdf->SetTextColor(255, 255, 255);
+	}
 	$pdf->SetXY($saveX, $curY);
 	$generator->printColDescContent($pdf, $curY, 'desc', $object, $i, $outputlangs, $hideref, $hidedesc);
 	$generator->setAfterColsLinePositionsData('desc', $pdf->GetY(), $pdf->getPage());

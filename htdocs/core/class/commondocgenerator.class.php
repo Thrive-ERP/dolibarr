@@ -752,7 +752,7 @@ abstract class CommonDocGenerator
 			$array_key.'_remain_to_pay' => price2num($object->total_ttc - $already_payed_all, 'MT')
 		);
 
-		if (in_array($object->element, array('facture', 'invoice', 'supplier_invoice', 'facture_fournisseur'))) {
+		if (in_array($object->element, array('facture', 'invoice', 'supplier_invoice', 'facture_fournisseur', 'commande'))) {
 			$bank_account = null;
 
 			if (property_exists($object, 'fk_account') && $object->fk_account > 0) {
@@ -869,6 +869,7 @@ abstract class CommonDocGenerator
 	public function get_substitutionarray_lines($line, $outputlangs, $linenumber = 0)
 	{
 		// phpcs:enable
+		$isSubtotalsLine = (defined('SUBTOTALS_SPECIAL_CODE') && !empty($line->special_code) && $line->special_code == SUBTOTALS_SPECIAL_CODE);
 		$resarray = array(
 			'line_pos' => $linenumber,
 			'line_fulldesc' => doc_getlinedesc($line, $outputlangs),
@@ -885,7 +886,7 @@ abstract class CommonDocGenerator
 			'line_up_locale' => price($line->subprice, 0, $outputlangs),
 			'line_total_up' => price2num($line->subprice * (float) $line->qty),
 			'line_total_up_locale' => price($line->subprice * (float) $line->qty, 0, $outputlangs),
-			'line_qty' => $line->qty,
+			'line_qty' => ($isSubtotalsLine ? '' : $line->qty),
 			'line_discount_percent' => ($line->remise_percent ? $line->remise_percent.'%' : ''),
 			'line_price_ht' => price2num($line->total_ht),
 			'line_price_ttc' => price2num($line->total_ttc),

@@ -1311,13 +1311,15 @@ if ($id > 0 || !empty($ref)) {
 	$sql .= " e.rowid as warehouse_id, e.ref as entrepot,";
 	$sql .= " cfd.rowid as dispatchlineid, cfd.fk_product, cfd.qty, cfd.eatby, cfd.sellby, cfd.batch, cfd.comment, cfd.status, cfd.datec";
 	$sql .= " ,cd.rowid, cd.subprice";
+	$sql .= " ,pl.rowid as lot_id, pl.sellby as lot_sellby, pl.eatby as lot_eatby";
 	if (isModEnabled('reception')) {
-		$sql .= ", cfd.fk_reception, r.date_delivery";
+		$sql .= ", cfd.fk_reception, r.date_delivery, r.ref as reception_ref, r.fk_statut as reception_statut";
 	}
 	$sql .= " FROM ".MAIN_DB_PREFIX."product as p,";
 	$sql .= " ".MAIN_DB_PREFIX."receptiondet_batch as cfd";
 	$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."commande_fournisseurdet as cd ON cd.rowid = cfd.fk_elementdet";
 	$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."entrepot as e ON cfd.fk_entrepot = e.rowid";
+	$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."product_lot as pl ON pl.fk_product = cfd.fk_product AND pl.batch = cfd.batch";
 	if (isModEnabled('reception')) {
 		$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."reception as r ON cfd.fk_reception = r.rowid";
 	}
@@ -1391,7 +1393,9 @@ if ($id > 0 || !empty($ref)) {
 					print '<td class="nowraponall">';
 					if (!empty($objp->fk_reception)) {
 						$reception = new Reception($db);
-						$reception->fetch($objp->fk_reception);
+						$reception->id = (int) $objp->fk_reception;
+						$reception->ref = $objp->reception_ref;
+						$reception->statut = (int) $objp->reception_statut;
 						print $reception->getNomUrl(1);
 					}
 
@@ -1430,7 +1434,11 @@ if ($id > 0 || !empty($ref)) {
 					if ($objp->batch) {
 						include_once DOL_DOCUMENT_ROOT.'/product/stock/class/productlot.class.php';
 						$lot = new Productlot($db);
-						$lot->fetch(0, $objp->pid, $objp->batch);
+						$lot->id = (int) $objp->lot_id;
+						$lot->ref = (string) $objp->lot_id;
+						$lot->batch = $objp->batch;
+						$lot->sellby = $db->jdate($objp->lot_sellby);
+						$lot->eatby = $db->jdate($objp->lot_eatby);
 						print '<td class="dispatch_batch_number">'.$lot->getNomUrl(1).'</td>';
 						if (!getDolGlobalString('PRODUCT_DISABLE_SELLBY')) {
 							print '<td class="dispatch_dlc">'.dol_print_date($lot->sellby, 'day').'</td>';

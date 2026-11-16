@@ -1002,6 +1002,7 @@ $param .= $hookmanager->resPrint;
 // List of mass actions available
 $arrayofmassactions = array(
 	'validate' => img_picto('', 'check', 'class="pictofixedwidth"').$langs->trans("Validate"),
+	'edit_extrafields' => img_picto('', 'edit', 'class="pictofixedwidth"').$langs->trans("ModifyValueExtrafields"),
 	'generate_doc' => img_picto('', 'pdf', 'class="pictofixedwidth"').$langs->trans("ReGeneratePDF"),
   'builddoc' => img_picto('', 'pdf', 'class="pictofixedwidth"').$langs->trans("PDFMerge"),
 	//'presend'=>img_picto('', 'email', 'class="pictofixedwidth"').$langs->trans("SendByMail"),
@@ -1014,7 +1015,7 @@ if (isModEnabled('paymentbybanktransfer') && $user->hasRight("paymentbybanktrans
 if (!empty($permissiontodelete)) {
 	$arrayofmassactions['predelete'] = img_picto('', 'delete', 'class="pictofixedwidth"').$langs->trans("Delete");
 }
-if (GETPOSTINT('nomassaction') || in_array($massaction, array('presend', 'predelete'))) {
+if (GETPOSTINT('nomassaction') || in_array($massaction, array('presend', 'predelete', 'edit_extrafields'))) {
 	$arrayofmassactions = array();
 }
 $massactionbutton = $form->selectMassAction('', $arrayofmassactions);

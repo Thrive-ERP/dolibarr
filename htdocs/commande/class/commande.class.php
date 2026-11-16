@@ -1147,6 +1147,11 @@ class Commande extends CommonOrder
 					if ($result > 0 && $line->product_type == 9) {
 						$fk_parent_line = $result;
 					}
+					// Persist line extraparams (e.g. subtotal options) copied from origin line.
+					if ($result > 0 && !empty($line->extraparams)) {
+						$this->line->extraparams = $line->extraparams;
+						$this->line->setExtraParameters();
+					}
 				}
 
 				$result = $this->update_price(1, 'auto', 0, $mysoc); // This method is designed to add line from user input so total calculation must be done using 'auto' mode.
@@ -1432,6 +1437,11 @@ class Commande extends CommonOrder
 			$object->lines[$i]->fetch_optionals();
 			foreach ($object->lines[$i]->array_options as $options_key => $value) {
 				$line->array_options[$options_key] = $value;
+			}
+
+			// Copy line extraparams (e.g. subtotal title/subtotal options) from proposal line.
+			if (!empty($object->lines[$i]->extraparams)) {
+				$line->extraparams = $object->lines[$i]->extraparams;
 			}
 
 			$this->lines[$i] = $line;

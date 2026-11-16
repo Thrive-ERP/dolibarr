@@ -1506,6 +1506,12 @@ if (empty($reshook)) {
 				$tmpvat = (float) price2num(preg_replace('/\s*\(.*\)/', '', $tva_tx));
 				$tmpprodvat = (float) price2num(preg_replace('/\s*\(.*\)/', '', (string) $prod->tva_tx));
 
+				// A price level with no price row (or one saved without base type) gives an empty
+				// price_base_type, and addline() would then take pu_ttc as the net price.
+				if (empty($price_base_type)) {
+					$price_base_type = 'HT';
+				}
+
 				// Set unit price to use
 				if (!empty($price_ht) || (string) $price_ht === '0') {
 					$pu_ht = (float) price2num($price_ht, 'MU');

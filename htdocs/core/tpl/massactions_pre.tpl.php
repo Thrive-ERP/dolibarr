@@ -369,7 +369,7 @@ if ($massaction == 'presend') {
 
 if ($massaction == 'edit_extrafields') {
 	require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
-	$elementtype = $objecttmp->element;
+	$elementtype = $objecttmp->table_element;
 	/** @var CommonObject $objecttmp */
 	$extrafields = new ExtraFields($db);
 	$keysuffix = '';
